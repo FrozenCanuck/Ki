@@ -619,7 +619,11 @@ Ki.StatechartManager = {
     }
       
     if (trace) SC.Logger.info('exiting state: ' + state);
+    
+    if (state.stateWillExitState) state.stateWillExitState(state);
     state.exitState();
+    if (state.stateDidExitState) state.stateDidExitState(state);
+    
     if (this.get('monitorIsActive')) this.get('monitor').pushExitedState(state);
     state.set('currentSubstates', []);
     this._traverseStatesToExit(exitStatePath.shift(), exitStatePath, stopState);
@@ -678,14 +682,19 @@ Ki.StatechartManager = {
       } 
       
       // Looks like we hit the end of the road. Therefore the state has now become
-      // a current state if the statechart. Will will update all of the ancestor
-      // state to include this state as one of their current substates.
+      // a current state if the statechart. Will will update the state itself and 
+      // all of its ancestor states to include this state as one of their current 
+      // substates.
       else {
+        if (state.stateWillBecomeCurrentState) state.stateWillBecomeCurrentState(state);
+        
         var parentState = state;
         while (parentState) {
           parentState.get('currentSubstates').push(state);
           parentState = parentState.get('parentState');
         }
+        
+        if (state.stateDidBecomeCurrentState) state.stateDidBecomeCurrentState(state);
       }
     }
     
@@ -726,7 +735,11 @@ Ki.StatechartManager = {
     if (this.get('trace')) SC.Logger.info('entering state: ' + state);
     var parentState = state.get('parentState');
     if (parentState && !state.get('isParallelState')) parentState.set('historyState', state);
+    
+    if (state.stateWillEnterState) state.stateWillEnterState(state);
     state.enterState();
+    if (state.stateDidEnterState) state.stateDidEnterState(state);
+    
     if (this.get('monitorIsActive')) this.get('monitor').pushEnteredState(state);
   },
   
