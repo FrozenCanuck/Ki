@@ -286,3 +286,5 @@ Ki.State.plugin = function(value) {
   func.statePlugin = YES;
   return func;
 };
+
+Ki.State.design = Ki.State.extend;

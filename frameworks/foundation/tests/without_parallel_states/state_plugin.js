@@ -17,7 +17,7 @@ externalState2 = null;
 module("Ki.Statechart Mixin: Basic Unit test", {
   setup: function() {
     
-    externalState1 = Ki.State2.extend({
+    externalState1 = Ki.State.extend({
       
       message: 'external state 1'
       
@@ -35,7 +35,7 @@ module("Ki.Statechart Mixin: Basic Unit test", {
       
     });
     
-    statechart = Ki.Statechart2.create({
+    statechart = Ki.Statechart.create({
       
       monitorIsActive: YES,
       

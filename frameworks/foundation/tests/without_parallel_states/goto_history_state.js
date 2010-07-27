@@ -16,7 +16,7 @@ var statechart = null;
 module("Ki.Statechart: No Parallel States - Goto History State Tests", {
   setup: function() {
 
-    statechart = Ki.Statechart2.create({
+    statechart = Ki.Statechart.create({
       
       monitorIsActive: YES,
       
