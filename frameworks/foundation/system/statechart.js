@@ -346,6 +346,11 @@ Ki.StatechartManager = {
     
     state = this._findMatchingState(state, this._registeredStates);
     
+    if (SC.none(state)) {
+      SC.Logger.error('Can not to goto state %@. Not a recognized state in statechart'.fmt(paramState));
+      return;
+    }
+    
     if (this._gotoStateLocked) {
       // There is a state transition currently happening. Add this requested state
       // transition to the queue of pending state transitions. The request will
@@ -368,6 +373,7 @@ Ki.StatechartManager = {
       fromCurrentState =  this._findMatchingState(fromCurrentState, this.get('currentStates'));
       if (SC.none(fromCurrentState)) {
         SC.Logger.error('Can not to goto state %@. %@ is not a recognized current state in statechart'.fmt(paramState, paramFromCurrentState));
+        this._gotoStateLocked = NO;
         return;
       }
     } 
@@ -375,11 +381,6 @@ Ki.StatechartManager = {
       // No explicit current state to start from; therefore, just use the first current state as 
       // a default, if there is a current state.
       fromCurrentState = this.get('currentStates')[0];
-    }
-  
-    if (SC.none(state)) {
-      SC.Logger.error('Can not to goto state %@. Not a recognized state in statechart'.fmt(paramState));
-      return;
     }
         
     if (trace) {
@@ -404,6 +405,7 @@ Ki.StatechartManager = {
       if (trace) SC.Logger.info('pivot state = ' + pivotState);
       if (pivotState.get('substatesAreParallel')) {
         SC.Logger.error('Can not go to state %@. Pivot state %@ has parallel substates.'.fmt(state, pivotState));
+        this._gotoStateLocked = NO;
         return;
       }
     }
@@ -455,7 +457,7 @@ Ki.StatechartManager = {
   */
   gotoHistoryState: function(state, fromCurrentState, recursive) {
     if (!this.get('statechartIsInitialized')) {
-      SC.Logger.error("can not go to state %@'s history state . statechart has not yet been initialized".fmt(state));
+      SC.Logger.error("can not go to state %@'s history state. Statechart has not yet been initialized".fmt(state));
       return;
     }
     
@@ -500,8 +502,8 @@ Ki.StatechartManager = {
     
     if (this._sendEventLocked || this._goStateLocked) {
       // Want to prevent any actions from being processed by the states until 
-      // they have had a chance to handle handle the most immediate action or 
-      // completed a state transition
+      // they have had a chance to handle the most immediate action or completed 
+      // a state transition
       this._pendingSentEvents.push({
         event: event,
         sender: sender,
@@ -522,9 +524,7 @@ Ki.StatechartManager = {
         if (responder.tryToPerform) {
           try {
             eventHandled = responder.tryToPerform(event, sender, context);
-          } catch (ex) {
-            
-          }
+          } catch (ex) { /** Gobal the exception and move on */ }
         }
         if (!eventHandled) responder = responder.get('parentState');
       }
@@ -544,7 +544,8 @@ Ki.StatechartManager = {
   */
   _registerState: function(state) {
     if (!SC.none(this.getState(state.get('name')))) {
-      SC.Logger.error('can not register state %@ with statechart since there is already a registered state with name %@'.fmt(state, state.get('name')));
+      var msg = 'can not register state %@ with statechart since there is already a registered state with name %@';
+      SC.Logger.error(msg.fmt(state, state.get('name')));
       return;
     }
     this._registeredStates.push(state);
