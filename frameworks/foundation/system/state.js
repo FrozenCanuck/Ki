@@ -166,31 +166,44 @@ Ki.State = SC.Object.extend({
     substates is a current state.
   */
   gotoState: function(state) {
-    // if (this.get('isCurrentState')) {
-    //   this.get('statechart').gotoState(state, this);
-    //   return;
-    // }
-    // 
-    // var substates = this.get('substates');
-    // if (substates.length > 0) {
-    //   this.get('statechart').gotoState(state, substates[0]);
-    //   return;
-    // }
-    // 
-    // SC.Logger.error('Can not go to state %@ from state %@ since it and none of it substates is a current state'.fmt(state, this));
-    // 
-    // this.get('statechart').gotoState(state);
+    var fromState = null;
     
-    this.get('statechart').gotoState(state, this.get('isCurrentState') ? this : null);
+    if (this.get('isCurrentState')) {
+      fromState = this;
+    } else if (this.get('hasCurrentSubstates')) {
+      fromState = this.get('currentSubstates')[0];
+    }
+    
+    if (fromState) {
+      this.get('statechart').gotoState(state, fromState);
+    } else {
+      var msg = "Can not go to state %@ since state %@ " +
+                "neither is a current state or has current substates";
+      SC.Logger.error(msg.fmt(state, this));
+    }
   },
   
   /**
-    Used to go to a given state's history state in the statechart either directly from this stae if it
-    is a current state or from one of the statechart's current states. Ideally, you should only call this
-    method when this state is a current state. 
+    Used to go to a given state's history state in the statechart either directly from this state if it
+    is a current state or from one of this state's current substates. Only call this method when this state
+    or one of its substates is a current state.
   */
   gotoHistoryState: function(state, recursive) {
-    this.get('statechart').gotoHistoryState(state, this.get('isCurrentState') ? this : null, recursive);
+    var fromState = null;
+    
+    if (this.get('isCurrentState')) {
+      fromState = this;
+    } else if (this.get('hasCurrentSubstates')) {
+      fromState = this.get('currentSubstates')[0];
+    }
+    
+    if (fromState) {
+      this.get('statechart').gotoHistoryState(state, fromState, recursive);
+    } else {
+      var msg = "Can not go to state %@\'s history state since state %@ " +
+                "neither is a current state or has current substates";
+      SC.Logger.error(msg.fmt(state, this));
+    }
   },
   
   /**
@@ -233,7 +246,7 @@ Ki.State = SC.Object.extend({
   }.property(),
   
   /**
-    Indicate if this state has an substates
+    Indicate if this state has any substates
     
     @propety {Boolean}
   */
@@ -241,6 +254,13 @@ Ki.State = SC.Object.extend({
     return this.getPath('substates.length') > 0;
   }.property('substates'),
   
+  /**
+    Indicates if this state has any current substates
+  */
+  hasCurrentSubstates: function() {
+    var current = this.get('currentSubstates');
+    return !SC.none(current) && current.get('length') > 0;
+  }.property('currentSubstates'),
   
   /**
     Used to re-enter this state. Call this only when the state a current state of
