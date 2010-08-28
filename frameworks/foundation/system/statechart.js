@@ -6,11 +6,6 @@
 
 /*globals Ki */
 
-/** 
-  The default name given to a statechart's root state
-*/
-Ki.ROOT_STATE_NAME = "__ROOT_STATE__";
-
 /**
   The startchart manager mixin allows an object to be a statechart. By becoming a statechart, the
   object can then be manage a set of its own states.
@@ -168,6 +163,7 @@ Ki.ROOT_STATE_NAME = "__ROOT_STATE__";
   into as many files as you see fit.
 
 */
+
 Ki.StatechartManager = {
   
   // Walk like a duck
@@ -222,8 +218,6 @@ Ki.StatechartManager = {
     
     // Alias method
     this.sendAction = this.sendEvent;
-    
-    // For some backwards compability with Ki statechart framework
     this.goState = this.gotoState;
     this.goHistoryState = this.gotoHistoryState;
     
@@ -370,9 +364,10 @@ Ki.StatechartManager = {
     
     if (!SC.none(fromCurrentState)) {
       // Check to make sure the current state given is actually a current state of this statechart
-      fromCurrentState =  this._findMatchingState(fromCurrentState, this.get('currentStates'));
+      fromCurrentState = this._findMatchingState(fromCurrentState, this.get('currentStates'));
       if (SC.none(fromCurrentState)) {
-        SC.Logger.error('Can not to goto state %@. %@ is not a recognized current state in statechart'.fmt(paramState, paramFromCurrentState));
+        var msg = 'Can not to goto state %@. %@ is not a recognized current state in statechart';
+        SC.Logger.error(msg.fmt(paramState, paramFromCurrentState));
         this._gotoStateLocked = NO;
         return;
       }
@@ -410,29 +405,144 @@ Ki.StatechartManager = {
       }
     }
     
+    // Collect what actions to perform for the state transition process
+    var gotoStateActions = [];
+    
     // Go ahead and exit states recursively
-    this._traverseStatesToExit(exitStates.shift(), exitStates, pivotState);
+    this._traverseStatesToExit(exitStates.shift(), exitStates, pivotState, gotoStateActions);
     
     // Now enter states recursively
     if (pivotState !== state) {
-      this._traverseStatesToEnter(enterStates.pop(), enterStates, pivotState, useHistory);
+      this._traverseStatesToEnter(enterStates.pop(), enterStates, pivotState, useHistory, gotoStateActions);
     } else {
-      this._traverseStatesToExit(pivotState, []);
-      this._traverseStatesToEnter(pivotState, null, null, useHistory);
+      this._traverseStatesToExit(pivotState, [], null, gotoStateActions);
+      this._traverseStatesToEnter(pivotState, null, null, useHistory, gotoStateActions);
     }
     
-    // We're done! Finish by setting this startchart's current states
-    this.set('currentStates', this.get('rootState').currentSubstates);
+    // Collected all the state transition actions to be performed. Now execute them.
+    this._executeGotoStateActions(state, gotoStateActions);
+  },
+  
+  /**
+    Indicates if the statechart is in an active goto state process
+  */
+  gotoStateActive: function() {
+    return this._gotoStateLocked;
+  }.property(),
+  
+  /**
+    Indicates if the statechart is in an active goto state process
+    that has been suspended
+  */
+  gotoStateSuspended: function() {
+    return this._gotoStateLocked && !!this._gotoStateSuspendedPoint;
+  }.property(),
+  
+  /**
+    Resumes an active goto state transition process that has been suspended.
+  */
+  resumeGotoState: function() {
+    if (!this.get('gotoStateSuspended')) {
+      SC.Logger.error('Can not resume goto state since it has not been suspended');
+      return;
+    }
     
-    if (trace) {
+    var point = this._gotoStateSuspendedPoint;
+    this._executeGotoStateActions(point.gotoState, point.actions, point.marker);
+  },
+  
+  /** @private */
+  _executeGotoStateActions: function(gotoState, actions, marker) {
+    var action = null,
+        len = actions.length,
+        actionResult = null;
+      
+    marker = SC.none(marker) ? 0 : marker;
+    
+    for (; marker < len; marker += 1) {
+      action = actions[marker];
+      switch (action.action) {
+        case Ki.EXIT_STATE:
+          actionResult = this._exitState(action.state);
+          break;
+          
+        case Ki.ENTER_STATE:
+          actionResult = this._enterState(action.state, action.currentState);
+          break;
+      }
+      
+      //
+      // Check if the state wants to perform an asynchronous action during
+      // the state transition process. If so, then we need to first
+      // suspend the state transition process and then invoke the 
+      // asynchronous action. Once called, it is then up to the state or something 
+      // else to resume this statechart's state transition process by calling the
+      // statechart's resumeGotoState method.
+      //
+      if (SC.kindOf(actionResult, Ki.Async)) {
+        this._gotoStateSuspendedPoint = {
+          gotoState: gotoState,
+          actions: actions,
+          marker: marker + 1
+        }; 
+        
+        actionResult.tryToPerform(action.state);
+        return;
+      }
+    }
+    
+    if (this.get('trace')) {
       SC.Logger.info('current states after: %@'.fmt(this.get('currentStates')));
-      SC.Logger.info('END gotoState: %@'.fmt(state));
+      SC.Logger.info('END gotoState: %@'.fmt(gotoState));
     }
     
     // Okay. We're done with the current state transition. Make sure to unlock the
     // gotoState and let other pending state transitions execute.
+    this._gotoStateSuspendedPoint = null;
     this._gotoStateLocked = NO;
     this._flushPendingStateTransition();
+  },
+  
+  /** @private */
+  _exitState: function(state) {
+    if (state.get('currentSubstates').indexOf(state) >= 0) {  
+      var parentState = state.get('parentState');
+      while (parentState) {
+        parentState.get('currentSubstates').removeObject(state);
+        parentState = parentState.get('parentState');
+      }
+    }
+      
+    if (this.get('trace')) SC.Logger.info('exiting state: ' + state);
+    
+    var result = state.exitState();
+    
+    if (this.get('monitorIsActive')) this.get('monitor').pushExitedState(state);
+    state.set('currentSubstates', []);
+    state._traverseStatesToExit_skipState = NO;
+    
+    return result;
+  },
+  
+  /** @private */
+  _enterState: function(state, current) {
+    var parentState = state.get('parentState');
+    if (parentState && !state.get('isParallelState')) parentState.set('historyState', state);
+    
+    if (this.get('trace')) SC.Logger.info('entering state: ' + state);
+    var result = state.enterState();
+    
+    if (this.get('monitorIsActive')) this.get('monitor').pushEnteredState(state);
+    
+    if (current) {
+      parentState = state;
+      while (parentState) {
+        parentState.get('currentSubstates').push(state);
+        parentState = parentState.get('parentState');
+      }
+    }
+    
+    return result;
   },
   
   /**
@@ -593,7 +703,7 @@ Ki.StatechartManager = {
     @param exitStatePath {Array} an array representing a path of states that are to be exited
     @param stopState {State} an explicit state in which to stop the exiting process
   */
-  _traverseStatesToExit: function(state, exitStatePath, stopState) {
+  _traverseStatesToExit: function(state, exitStatePath, stopState, gotoStateActions) {    
     if (!state || state === stopState) return;
     
     var trace = this.get('trace');
@@ -601,33 +711,22 @@ Ki.StatechartManager = {
     // This state has parallel substates. Therefore we have to make sure we
     // exit them up to this state before we can go any further up the exit chain.
     if (state.get('substatesAreParallel')) {
-      var i = 0;
-      var states = state.get('currentSubstates');
-      var len = states.length;
+      var i = 0,
+          currentSubstates = state.get('currentSubstates'),
+          len = currentSubstates.length,
+          currentState = null;
       
       for (; i < len; i += 1) {
-        var chain = this._createStateChain(states[i]);
-        this._traverseStatesToExit(chain.shift(), chain, state);
+        currentState = currentSubstates[i];
+        if (currentState._traverseStatesToExit_skipState === YES) continue;
+        var chain = this._createStateChain(currentState);
+        this._traverseStatesToExit(chain.shift(), chain, state, gotoStateActions);
       }
     }
-     
-    if (state.get('currentSubstates').indexOf(state) >= 0) {  
-      var parentState = state.get('parentState');
-      while (parentState) {
-        parentState.get('currentSubstates').removeObject(state);
-        parentState = parentState.get('parentState');
-      }
-    }
-      
-    if (trace) SC.Logger.info('exiting state: ' + state);
     
-    if (state.stateWillExitState) state.stateWillExitState(state);
-    state.exitState();
-    if (state.stateDidExitState) state.stateDidExitState(state);
-    
-    if (this.get('monitorIsActive')) this.get('monitor').pushExitedState(state);
-    state.set('currentSubstates', []);
-    this._traverseStatesToExit(exitStatePath.shift(), exitStatePath, stopState);
+    gotoStateActions.push({ action: Ki.EXIT_STATE, state: state });
+    if (state.get('isCurrentState')) state._traverseStatesToExit_skipState = YES;
+    this._traverseStatesToExit(exitStatePath.shift(), exitStatePath, stopState, gotoStateActions);
   },
   
   /** @private
@@ -643,7 +742,7 @@ Ki.StatechartManager = {
     @param pivotState {State} The state pivoting when to go from exiting states to entering states
     @param useHistory {Boolean} indicates whether to recursively follow history states 
   */
-  _traverseStatesToEnter: function(state, enterStatePath, pivotState, useHistory) {
+  _traverseStatesToEnter: function(state, enterStatePath, pivotState, useHistory, gotoStateActions) {
     if (!state) return;
     
     var trace = this.get('trace');
@@ -652,63 +751,54 @@ Ki.StatechartManager = {
     // the pivot state has been reached, then we can go ahead and actually enter states.
     if (pivotState) {
       if (state !== pivotState) {
-        this._traverseStatesToEnter(enterStatePath.pop(), enterStatePath, pivotState, useHistory);
+        this._traverseStatesToEnter(enterStatePath.pop(), enterStatePath, pivotState, useHistory, gotoStateActions);
       } else {
-        this._traverseStatesToEnter(enterStatePath.pop(), enterStatePath, null, useHistory);
+        this._traverseStatesToEnter(enterStatePath.pop(), enterStatePath, null, useHistory, gotoStateActions);
       }
     }
     
     // If no more explicit enter path instructions, then default to enter states based on 
     // other criteria
     else if (!enterStatePath || enterStatePath.length === 0) {
-      this._enterState(state);
+      var gotoStateAction = { action: Ki.ENTER_STATE, state: state, currentState: NO };
+      gotoStateActions.push(gotoStateAction);
       
       var initialSubstate = state.get('initialSubstate'),
           historyState = state.get('historyState');
       
       // State has parallel substates. Need to enter all of the substates
       if (state.get('substatesAreParallel')) {
-        this._traverseParallelStatesToEnter(state.get('substates'), null, useHistory);
+        this._traverseParallelStatesToEnter(state.get('substates'), null, useHistory, gotoStateActions);
       }
       
       // State has substates and we are instructed to recursively follow the state's
       // history state if it has one.
       else if (state.get('hasSubstates') && historyState && useHistory) {
-        this._traverseStatesToEnter(historyState, null, null, useHistory);
+        this._traverseStatesToEnter(historyState, null, null, useHistory, gotoStateActions);
       }
       
       // State has an initial substate to ener
       else if (initialSubstate) {
-        this._traverseStatesToEnter(initialSubstate, null, null, useHistory);  
+        this._traverseStatesToEnter(initialSubstate, null, null, useHistory, gotoStateActions);  
       } 
       
       // Looks like we hit the end of the road. Therefore the state has now become
-      // a current state if the statechart. Will will update the state itself and 
-      // all of its ancestor states to include this state as one of their current 
-      // substates.
+      // a current state if the statechart.
       else {
-        if (state.stateWillBecomeCurrentState) state.stateWillBecomeCurrentState(state);
-        
-        var parentState = state;
-        while (parentState) {
-          parentState.get('currentSubstates').push(state);
-          parentState = parentState.get('parentState');
-        }
-        
-        if (state.stateDidBecomeCurrentState) state.stateDidBecomeCurrentState(state);
+        gotoStateAction.currentState = YES;
       }
     }
     
     // Still have an explicit enter path to follow, so keep moving through the path.
     else if (enterStatePath.length > 0) {
-      this._enterState(state);
+      gotoStateActions.push({ action: Ki.ENTER_STATE, state: state });
       var nextState = enterStatePath.pop();
-      this._traverseStatesToEnter(nextState, enterStatePath, null, useHistory); 
+      this._traverseStatesToEnter(nextState, enterStatePath, null, useHistory, gotoStateActions); 
       
       // We hit a state that has parallel substates. Must go through each of the substates
       // and enter them
       if (state.get('substatesAreParallel')) {
-        this._traverseParallelStatesToEnter(state.get('substates'), nextState, useHistory);
+        this._traverseParallelStatesToEnter(state.get('substates'), nextState, useHistory, gotoStateActions);
       }
     }
   },
@@ -717,31 +807,15 @@ Ki.StatechartManager = {
   
     Iterate over all the given parallel states and enter them
   */
-  _traverseParallelStatesToEnter: function(states, exclude, useHistory) {
+  _traverseParallelStatesToEnter: function(states, exclude, useHistory, gotoStateActions) {
     var i = 0,
         len = states.length,
         state = null;
     
     for (; i < len; i += 1) {
       state = states[i];
-      if (state !== exclude) this._traverseStatesToEnter(state, null, null, useHistory);
+      if (state !== exclude) this._traverseStatesToEnter(state, null, null, useHistory, gotoStateActions);
     }
-  },
-  
-  /** @private
-    
-    Will actually enters a given state
-  */
-  _enterState: function(state) {
-    if (this.get('trace')) SC.Logger.info('entering state: ' + state);
-    var parentState = state.get('parentState');
-    if (parentState && !state.get('isParallelState')) parentState.set('historyState', state);
-    
-    if (state.stateWillEnterState) state.stateWillEnterState(state);
-    state.enterState();
-    if (state.stateDidEnterState) state.stateDidEnterState(state);
-    
-    if (this.get('monitorIsActive')) this.get('monitor').pushEnteredState(state);
   },
   
   /** @private
@@ -812,11 +886,96 @@ Ki.StatechartManager = {
     if (this.get('monitorIsActive') && SC.none(this.get('monitor'))) {
       this.set('monitor', Ki.StatechartMonitor.create());
     }
-  }.observes('monitorDidChange')
+  }.observes('monitorIsActive')
   
 };
+
+/** 
+  The default name given to a statechart's root state
+*/
+Ki.ROOT_STATE_NAME = "__ROOT_STATE__";
+
+/**
+  Constants used during the state transition process
+*/
+Ki.EXIT_STATE = 0;
+Ki.ENTER_STATE = 1;
 
 /**
   A Startchart class. 
 */
 Ki.Statechart = SC.Object.extend(Ki.StatechartManager);
+
+/**
+  Represents a call that is intended to be asynchronous. This is
+  used during a state transition process when either entering or
+  exiting a state.
+*/
+Ki.Async = SC.Object.extend({
+  
+  func: null,
+  
+  arg1: null,
+  
+  arg2: null,
+  
+  /** @private
+    Called by the statechart
+  */
+  tryToPerform: function(state) {
+    var func = this.get('func'),
+        arg1 = this.get('arg1'),
+        arg2 = this.get('arg2'),
+        funcType = SC.typeOf(func);
+      
+    if (funcType === SC.T_STRING) {
+      state.tryToPerform(func, arg1, arg2);
+    } 
+    else if (funcType === SC.T_FUNCTION) {
+      func.apply(state, [arg1, arg2]);
+    }
+  }
+  
+});
+
+/**
+  Singleton
+*/
+Ki.Async.mixin({
+  
+  /**
+    Call in either a state's enterState or exitState method when you
+    want a state to perform an asynchronous action, such as an animation.
+    
+    Examples:
+    
+    {{
+    
+      Ki.State.extend({
+    
+        enterState: function() {
+          return Ki.Async.perform('foo');
+        },
+      
+        exitState: function() {
+          return Ki.Async.perform('bar', 100);
+        }
+      
+        foo: function() { ... },
+      
+        bar: function(arg) { ... }
+    
+      });
+    
+    }}
+    
+    @param func {String|Function} the functio to be invoked on a state
+    @param arg1 Optional. An argument to pass to the given function
+    @param arg2 Optional. An argument to pass to the given function
+    @return {Ki.Async} a new instance of a Ki.Async
+  */
+  perform: function(func, arg1, arg2) {
+    return Ki.Async.create({ func: func, arg1: arg1, arg2: arg2 });
+  }
+  
+});

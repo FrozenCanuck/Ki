@@ -207,6 +207,13 @@ Ki.State = SC.Object.extend({
   },
   
   /**
+    Resumes an active goto state transition process that has been suspended.
+  */
+  resumeGotoState: function() {
+    this.get('statechart').resumeGotoState();
+  },
+  
+  /**
     Used to check if a given state is a current substate of this state. Mainly used in cases
     when this state is a parallel state.
     
@@ -276,16 +283,48 @@ Ki.State = SC.Object.extend({
   },
   
   /**
-    Called whenever this state is to be entered during a state transition process. 
+    Called whenever this state is to be entered during a state transition process. This 
+    is useful when you want the state to perform some initial set up procedures. 
     
-    This is useful when you want the state to perform some initial set up procedures. 
+    If when entering the state you want to perform some kind of asynchronous action, such
+    as an animation or fetching remote data, then you need to return an asynchronous 
+    action, which is done like so:
+    
+    {{{
+    
+      enterState: function() {
+        return Ki.Async.perform('foo');
+      }
+    
+    }}}
+    
+    After returning an action to be performed asynchronously, the statechart will suspend
+    the active state transition process. In order to resume the process, you must call
+    this state's resumeGotoState method or the statechart's resumeGotoState. If no asynchronous 
+    action is to be perform, then nothing needs to be returned.
   */
   enterState: function() { },
   
   /**
-    Called whenever this state is to be exited during a state transition process. 
+    Called whenever this state is to be exited during a state transition process. This is 
+    useful when you want the state to peform some clean up procedures.
     
-    This is useful when you want the state to peform some clean up procedures
+    If when exiting the state you want to perform some kind of asynchronous action, such
+    as an animation or fetching remote data, then you need to return an asynchronous 
+    action, which is done like so:
+    
+    {{{
+    
+      exitState: function() {
+        return Ki.Async.perform('foo');
+      }
+    
+    }}}
+    
+    After returning an action to be performed asynchronously, the statechart will suspend
+    the active state transition process. In order to resume the process, you must call
+    this state's resumeGotoState method or the statechart's resumeGotoState. If no asynchronous 
+    action is to be perform, then nothing needs to be returned.
   */
   exitState: function() { },
   
@@ -298,6 +337,8 @@ Ki.State = SC.Object.extend({
 /**
   Use this when you want to plug-in a state into a statechart. This is beneficial
   in cases where you split your statechart's states up into multiple files.
+  
+  @param value {String} property path to a state class
 */
 Ki.State.plugin = function(value) {
   var func = function() {

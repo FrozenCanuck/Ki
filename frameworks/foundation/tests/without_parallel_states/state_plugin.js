@@ -3,9 +3,6 @@
 // ==========================================================================
 /*globals Ki externalState1 externalState2 */
 
-/**
-  @author Michael
-*/
 var statechart = null;
 externalState1 = null;
 externalState2 = null;

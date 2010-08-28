@@ -3,16 +3,13 @@
 // ==========================================================================
 /*globals Ki */
 
-/**
-  @author Michael
-*/
 var statechart = null;
 
 // ..........................................................
 // CONTENT CHANGING
 // 
 
-module("Ki.Statechart: With Parallel States - Goto State Intermediate Tests", {
+module("Ki.Statechart: With Parallel States - Goto State Advanced Tests", {
   setup: function() {
     
     statechart = Ki.Statechart.create({
