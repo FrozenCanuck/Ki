@@ -22,11 +22,11 @@ module("Ki.Statechart: No Parallel States - Goto State Asynchronous Tests", {
       },
       
       enterState: function() {
-        return Ki.Async.perform('foo');
+        return this.performAsync('foo');
       },
       
       exitState: function() {
-        return Ki.Async.perform(function() { this.foo(); });
+        return this.performAsync(function() { this.foo(); });
       }
     };
   
@@ -45,11 +45,11 @@ module("Ki.Statechart: No Parallel States - Goto State Asynchronous Tests", {
           methodInvoked: null,
           
           enterState: function() {
-            return Ki.Async.perform('foo');
+            return this.performAsync('foo');
           },
           
           exitState: function() {
-            return Ki.Async.perform('bar');
+            return this.performAsync('bar');
           },
           
           foo: function(arg1, arg2) {

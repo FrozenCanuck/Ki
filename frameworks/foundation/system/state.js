@@ -293,7 +293,7 @@ Ki.State = SC.Object.extend({
     {{{
     
       enterState: function() {
-        return Ki.Async.perform('foo');
+        return this.performAsync('foo');
       }
     
     }}}
@@ -316,7 +316,7 @@ Ki.State = SC.Object.extend({
     {{{
     
       exitState: function() {
-        return Ki.Async.perform('foo');
+        return this.performAsync('foo');
       }
     
     }}}
@@ -327,6 +327,17 @@ Ki.State = SC.Object.extend({
     action is to be perform, then nothing needs to be returned.
   */
   exitState: function() { },
+  
+  /**
+    Call when an asynchronous action need to be performed when either entering or exiting
+    a state.
+    
+    @see enterState
+    @see exitState
+  */
+  performAsync: function(func, arg1, arg2) {
+    return Ki.Async.perform(func, arg1, arg2);
+  },
   
   toString: function() {
     return "Ki.State<%@, %@>".fmt(this.get("name"), SC.guidFor(this));
