@@ -6,11 +6,13 @@
 
 Ki is a statechart framework that supports:
 
-  * State Hierarchy - nesting of states
-  * State Orthogonality - state independence (concurrency)
-  * State Clustering - grouping states together within a state 
-  * Asynchronous State Transitioning - allow for asynchronous actions during a state transition process
-  * Module Design - building states independently that can then be connected and reused within a statechart
+  * __State Hierarchy__ - nesting (compositing) of states
+  * __State Orthogonality__ - state independence (concurrency)
+  * __State Clustering__ - grouping states together within a state 
+  * __State History__ - keeping track of states that were entered, both shallow and deep history
+  * __Event Handling__ - states reacting to incoming events
+  * __Asynchronous State Transitioning__ - allow for asynchronous actions during a state transition process
+  * __Module Design__ - building states independently that can then be connected and reused within a statechart
   
 The framework's design was closely based on David Harel's original paper ["Statecharts: A Visual Formalism For Complex Systems"](http://www.wisdom.weizmann.ac.il/~harel/papers/Statecharts.pdf).
 
@@ -18,7 +20,7 @@ The framework's design was closely based on David Harel's original paper ["State
 
 In most applications that react to external and internal asynchronous events, some form of states are used to 
 help manage when an action can respond to those incoming events. Usually these states are represented as kinds of
-variables within objects or module whose value is checked to determine if a constraint has been met.
+variables whose value are checked and updated throughout various objects and modules that make up the application.
 The problem with states that are built as such are the following:
 
   * The actions that rely on the state variables are spread throughout the system and not 
@@ -36,7 +38,7 @@ Ki resolves these issues and thereby helps make your state logic more maintainab
 David Harel originally developed the idea of statecharts back in the early 80s while working on a complex application for the 
 Israel Aircraft Industries. Given the complexity of the system and the number of events the system had
 to react to, Harel attempted to make use of traditional state transition diagrams to explicitly design how the 
-system's states would react to events and transition to other states. However, trying to use a tradition approach to 
+system would use states to react to events and transition to other states. However, trying to use a tradition approach to 
 representing finite states during the design process led to a few problems. 
 
 First, a small change to the system would often represent a large change to the state transition diagram, and, ultimately, 
@@ -49,16 +51,16 @@ states and state transitions in order to conserve space.
 
 Through various experimentation while working on the application, Harel and a team of others worked on new approaches 
 to address the problems with traditional state transition diagrams. This eventually led to a new way of depicting, managing,
-and maintaining an application's state architecture: Statecharts.  
+and maintaining an application's states: Statecharts.  
 
 Statechart diagrams are able to address the shortcomings of traditional state transition diagrams. They allowed states to be grouped
-together and placed with a parent state. Grouping of states into a common parent state also allowed for abstraction. 
+together and placed with a common parent state. Grouping of states into a common parent state also allowed for abstraction. 
 In addition, grouping states into a common parent state meant that the number of state transitions could be reduced.
 States that were independent of each other could be depicted in statecharts with minimal effort. 
 
 This new approach of depicting states meant that diagrams could now be properly managed for complex systems and would not
 grow or change exponentially in size based on small changes to the system. Another benefit of statecharts was its 
-formal and precise way of describing states, but also allowing for relative ease of analyzing the diagrams by people who 
+formal and precise way of describing states, but also allowing for relative ease of analyzing the diagrams even by people who 
 were not experts of statecharts.           
     
     
