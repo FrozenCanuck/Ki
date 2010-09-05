@@ -598,13 +598,12 @@ Ki.StatechartManager = {
     will be tried. This process is recursively done until no more parent state can be tried.
     
     @param event {String} name of the event
-    @param sender {Object} object sending the event
-    @param context {Object} Optional. additonal context info
+    @param sender {Object} Optional. object sending the event
+    @param context {Object} Optional. additional information to pass along
     @returns {SC.Responder} the responder that handled it or null
   */
   sendEvent: function(event, sender, context) {
-    var logLevel = this.get('logLevel'),
-        eventHandled = NO,
+    var eventHandled = NO,
         currentStates = this.get('currentStates'),
         len = 0,
         i = 0,

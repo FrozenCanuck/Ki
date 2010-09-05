@@ -113,7 +113,7 @@ test("go to state h", function() {
   monitor.reset();
   statechart.gotoState('h');
   
-  equals(monitor.get('length'), 2, 'initial state sequence should be of length 2');
+  equals(monitor.get('length'), 2, 'state sequence should be of length 2');
   equals(monitor.matchSequence().begin().exited('g').entered('h').end(), true, 'sequence should be exited[g], entered[h]');
   equals(monitor.matchSequence().begin().exited('h').entered('g').end(), false, 'sequence should not be exited[h], entered[g]');
   equals(statechart.get('currentStateCount'), 1, 'current state count should be 1');
@@ -127,7 +127,7 @@ test("go to states: h, d", function() {
   monitor.reset();
   statechart.gotoState('d');
   
-  equals(monitor.get('length'), 4, 'initial state sequence should be of length 4');
+  equals(monitor.get('length'), 4, 'state sequence should be of length 4');
   equals(monitor.matchSequence().begin().exited('h', 'c').entered('d', 'i').end(), true, 'sequence should be exited[h, c], entered[d, i]');
   equals(monitor.matchSequence().begin().exited('h', 'c').entered('d', 'f').end(), false, 'sequence should not be exited[h, c], entered[d, f]');
   equals(monitor.matchSequence().begin().exited('g', 'c').entered('d', 'i').end(), false, 'sequence should not be exited[g, c], entered[d, f]');
@@ -143,7 +143,7 @@ test("go to states: h, d, h", function() {
   monitor.reset();
   statechart.gotoState('h');
   
-  equals(monitor.get('length'), 4, 'initial state sequence should be of length 4');
+  equals(monitor.get('length'), 4, 'state sequence should be of length 4');
   equals(monitor.matchSequence().begin().exited('i', 'd').entered('c', 'h').end(), true, 'sequence should be exited[i, d], entered[c, h]');
   equals(statechart.get('currentStateCount'), 1, 'current state count should be 1');
   equals(statechart.stateIsCurrentState('h'), true, 'current state should be h');
@@ -154,7 +154,7 @@ test("go to state b", function() {
   monitor.reset();
   statechart.gotoState('b');
   
-  equals(monitor.get('length'), 6, 'initial state sequence should be of length 6');
+  equals(monitor.get('length'), 6, 'state sequence should be of length 6');
   equals(monitor.matchSequence().begin().exited('g', 'c', 'a').entered('b', 'e', 'k').end(), true, 'sequence should be exited[g, c, a], entered[b, e, k]');
   equals(monitor.matchSequence().begin().exited('g', 'a', 'c').entered('b', 'e', 'k').end(), false, 'sequence should not be exited[g, a, c], entered[b, e, k]');
   equals(monitor.matchSequence().begin().exited('g', 'c', 'a').entered('b', 'k', 'e').end(), false, 'sequence should not be exited[g, c, a], entered[b, k, e]');
@@ -167,7 +167,7 @@ test("go to state f", function() {
   monitor.reset();
   statechart.gotoState('f');
   
-  equals(monitor.get('length'), 6, 'initial state sequence should be of length 6');
+  equals(monitor.get('length'), 6, 'state sequence should be of length 6');
   equals(monitor.matchSequence().begin().exited('g', 'c', 'a').entered('b', 'f', 'm').end(), true, 'sequence should be exited[g, c, a], entered[b, f, m]');
   equals(statechart.get('currentStateCount'), 1, 'current state count should be 1');
   equals(statechart.stateIsCurrentState('m'), true, 'current state should be m');
@@ -178,7 +178,7 @@ test("go to state m", function() {
   monitor.reset();
   statechart.gotoState('n');
   
-  equals(monitor.get('length'), 6, 'initial state sequence should be of length 6');
+  equals(monitor.get('length'), 6, 'state sequence should be of length 6');
   equals(monitor.matchSequence().begin().exited('g', 'c', 'a').entered('b', 'f', 'n').end(), true, 'sequence should be exited[g, c, a], entered[b, f, n]');
   equals(statechart.get('currentStateCount'), 1, 'current state count should be 1');
   equals(statechart.stateIsCurrentState('n'), true, 'current state should be n');
@@ -189,7 +189,7 @@ test("re-enter state g", function() {
   monitor.reset();
   statechart.gotoState('g');
   
-  equals(monitor.get('length'), 2, 'initial state sequence should be of length 2');
+  equals(monitor.get('length'), 2, 'state sequence should be of length 2');
   equals(monitor.matchSequence().begin().exited('g').entered('g').end(), true, 'sequence should be exited[g], entered[g]');
   equals(statechart.get('currentStateCount'), 1, 'current state count should be 1');
   equals(statechart.stateIsCurrentState('g'), true, 'current state should be g');

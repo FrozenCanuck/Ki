@@ -7,8 +7,8 @@
 
 config :all, 
   :required => ['sproutcore/runtime'],
-  :test_required  => ['sproutcore/runtime'],
-  :debug_required => ['sproutcore/runtime']
+  :test_required  => ['sproutcore/runtime', 'sproutcore/foundation', 'sproutcore/desktop'],
+  :debug_required => ['sproutcore/runtime', 'sproutcore/foundation', 'sproutcore/desktop']
 
 mode :debug do
   config :all, 
