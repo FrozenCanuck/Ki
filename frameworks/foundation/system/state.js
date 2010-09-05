@@ -162,8 +162,7 @@ Ki.State = SC.Object.extend({
   
   /**
     Used to go to a state in the statechart either directly from this state if it is a current state,
-    or from one of this state's current substates. Only call this method when this state or one of its 
-    substates is a current state.
+    or from one of this state's current substates.
   */
   gotoState: function(state) {
     var fromState = null;
@@ -174,19 +173,12 @@ Ki.State = SC.Object.extend({
       fromState = this.get('currentSubstates')[0];
     }
     
-    if (fromState) {
-      this.get('statechart').gotoState(state, fromState);
-    } else {
-      var msg = "Can not go to state %@ since state %@ " +
-                "neither is a current state or has current substates";
-      SC.Logger.error(msg.fmt(state, this));
-    }
+    this.get('statechart').gotoState(state, fromState);
   },
   
   /**
     Used to go to a given state's history state in the statechart either directly from this state if it
-    is a current state or from one of this state's current substates. Only call this method when this state
-    or one of its substates is a current state.
+    is a current state or from one of this state's current substates. 
   */
   gotoHistoryState: function(state, recursive) {
     var fromState = null;
@@ -197,13 +189,7 @@ Ki.State = SC.Object.extend({
       fromState = this.get('currentSubstates')[0];
     }
     
-    if (fromState) {
-      this.get('statechart').gotoHistoryState(state, fromState, recursive);
-    } else {
-      var msg = "Can not go to state %@\'s history state since state %@ " +
-                "neither is a current state or has current substates";
-      SC.Logger.error(msg.fmt(state, this));
-    }
+    this.get('statechart').gotoHistoryState(state, fromState, recursive);
   },
   
   /**
