@@ -63,5 +63,6 @@ grow or change exponentially in size based on small changes to the system. Anoth
 formal and precise way of describing states, but also allowing for relative ease of analyzing the diagrams even by people who 
 were not experts of statecharts.           
     
-    
+For more information about the making of statecharts, please refer to Harel's paper ["Statecharts in the Making: 
+A Personal Account"](http://www.wisdom.weizmann.ac.il/~harel/papers/Statecharts.History.pdf).
   
