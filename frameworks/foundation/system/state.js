@@ -207,7 +207,7 @@ Ki.State = SC.Object.extend({
     @returns {Boolean} true is the given state is a current substate, otherwise false is returned
   */
   stateIsCurrentSubstate: function(state) {
-    state = this.get('statechart').getState(state);
+    if (SC.typeOf(state) === SC.T_STRING) state = this.get('statechart').getState(state);
     return this.get('currentSubstates').indexOf(state) >= 0;
   }, 
   
