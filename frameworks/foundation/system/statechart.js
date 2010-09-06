@@ -604,7 +604,7 @@ Ki.StatechartManager = {
   */
   sendEvent: function(event, sender, context) {
     var eventHandled = NO,
-        currentStates = this.get('currentStates'),
+        currentStates = this.get('currentStates').slice(),
         len = 0,
         i = 0,
         responder = null;
@@ -628,7 +628,7 @@ Ki.StatechartManager = {
     for (; i < len; i += 1) {
       eventHandled = NO;
       responder = currentStates[i];
-    
+      if (!responder.get('isCurrentState')) continue;
       while (!eventHandled && responder) {
         if (responder.tryToPerform) {
           try {
