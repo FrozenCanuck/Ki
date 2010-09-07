@@ -93,6 +93,8 @@ Ki.State = SC.Object.extend({
   initState: function() {
     if (this.get('stateIsInitialized')) return;
     
+    this._registerWithParentStates();
+    
     var key = null, 
         value = null,
         state = null,
@@ -100,6 +102,7 @@ Ki.State = SC.Object.extend({
         matchedInitialSubstate = NO,
         initialSubstate = this.get('initialSubstate'),
         substatesAreParallel = this.get('substatesAreParallel'),
+        statechart = this.get('statechart'),
         i = 0,
         len = 0;
     
@@ -113,7 +116,7 @@ Ki.State = SC.Object.extend({
       }
       
       if (SC.kindOf(value, Ki.State) && value.isClass && this[key] !== this.constructor) {
-        state = this._createSubstate(value, { name: key });
+        state = this.createSubstate(value, { name: key, parentState: this, statechart: statechart });
         substates.push(state);
         this[key] = state;
         state.initState();
@@ -130,7 +133,6 @@ Ki.State = SC.Object.extend({
     
     this.set('substates', substates);
     this.set('currentSubstates', []);
-    this.get('statechart')._registerState(this);
     
     if (substates.length === 0) {
       if (!SC.none(initialSubstate)) {
@@ -152,17 +154,147 @@ Ki.State = SC.Object.extend({
     this.set('stateIsInitialized', YES);
   },
   
-  _createSubstate: function(state, attrs) {
+  /**
+    creates a substate for this state
+  */
+  createSubstate: function(state, attrs) {
     if (!attrs) attrs = {};
-    attrs.parentState = this;
-    attrs.statechart = this.get('statechart');
     state = state.create(attrs);
     return state;
+  },
+  
+  /** @private
+    Will traverse up through this state's parent states to register
+    this state with them.
+  */
+  _registerWithParentStates: function() {
+    this._registerSubstate(this);
+    var parent = this.get('parentState');
+    while (!SC.none(parent)) {
+      parent._registerSubstate(this);
+      parent = parent.get('parentState');
+    }
+  },
+  
+  /** @private
+    Will register a given state as a substate of this state
+  */
+  _registerSubstate: function(state) {
+    var path = state.pathRelativeTo(this);
+    if (SC.none(path)) return; 
+    
+    // Create special private member variables to help
+    // keep track of substates and access them.
+    if (SC.none(this._registeredSubstatePaths)) {
+      this._registeredSubstatePaths = {};
+      this._registeredSubstates = [];
+    }
+    
+    this._registeredSubstates.push(state);
+    
+    // Keep track of states based on their relative path
+    // to this state. 
+    var regPaths = this._registeredSubstatePaths;
+    if (regPaths[state.get('name')] === undefined) {
+      regPaths[state.get('name')] = { __ki_paths__: [] };
+    }
+    
+    var paths = regPaths[state.get('name')];
+    paths[path] = state;
+    paths.__ki_paths__.push(path);
+  },
+  
+  /**
+    Will generate path for a given state that is relative to this state. It is
+    required that the given state is a substate of this state.
+    
+    If the heirarchy of the given state to this state is the following:
+    A > B > C, where A is this state and C is the given state, then the 
+    relative path generated will be "B.C"
+  */
+  pathRelativeTo: function(state) {
+    var path = this.get('name'),
+        parent = this.get('parentState');
+    
+    while (!SC.none(parent) && parent !== state) {
+      path = "%@.%@".fmt(parent.get('name'), path);
+      parent = parent.get('parentState');
+    }
+    
+    if (parent !== state && state !== this) {
+      SC.Logger.error('Can not generate relative path from %@ since it not a parent state of %@'.fmt(state, this));
+      return null;
+    }
+    
+    return path;
+  },
+  
+  /**
+    Used to find a substate of this state that matches a given value. 
+    
+    If the value is a state object, then the value will be returned if it is indeed 
+    a substate of this state, otherwise null is returned. 
+    
+    If the given value is a string, then the string is assumed to be a path to a substate. 
+    The value is then parsed to find the closes match. If there is no match then null 
+    is returned. If there is more than one match then null is return and an error 
+    is generated indicating ambiguity of the given value. 
+    
+    Note that when the value is a string, it is assumed to be a path relative to this 
+    state; not the root state of the statechart.
+  */
+  findMatchingSubstate: function(value) {
+    var valueType = SC.typeOf(value);
+    
+    // If the value is an object then just check if the value is 
+    // a registered substate of this state, and if so return it. 
+    if (valueType === SC.T_OBJECT) {
+      return this._registeredSubstates.indexOf(value) > -1 ? value : null;
+    }
+    
+    if (valueType !== SC.T_STRING) {
+      SC.Logger.error("Can not find matching subtype. value must be an object or string: %@".fmt(value));
+      return null;
+    }
+    
+    // The value is a string. Therefore treat the value as a relative path to 
+    // a substate of this state.
+    
+    // Extract that last part of the string. Ex. 'foo' => 'foo', 'foo.bar' => 'bar'
+    var matches = value.match(/(^|\.)(\w+)$/);
+    if (!matches) return null;
+
+    // Get all the paths related to the matched value. If no paths then return null.
+    var paths = this._registeredSubstatePaths[matches[2]];
+    if (SC.none(paths)) return null;
+    
+    // Do a quick check to see if there is a path that exactly matches the given
+    // value, and if so return the corresponding state
+    var state = paths[value];
+    if (!SC.none(state)) return state;
+    
+    // No exact match found. If the value given is a basic string with no ".", then check
+    // if there is only one path containing that string. If so, return it. If there is
+    // more than one path then it is ambiguous as to what state is trying to be reached.
+    if (matches[1] === "") {
+      if (paths.__ki_paths__.length === 1) return paths[paths.__ki_paths__[0]];
+      if (paths.__ki_paths__.length > 1) {
+        var msg = 'Can not find substate matching %@ in state %@. Ambiguous with the following: %@';
+        SC.Logger.error(msg.fmt(value, this, paths.__ki_paths__));
+      }
+    } 
+    
+    return null;
   },
   
   /**
     Used to go to a state in the statechart either directly from this state if it is a current state,
     or from one of this state's current substates.
+    
+    Note that if the value given is a string, it will be assumed to be a path to a state. The path
+    will be relative to the statechart's root state; not relative to this state.
+    
+    @param state {Ki.State|String} the state to go to
   */
   gotoState: function(state) {
     var fromState = null;
@@ -179,6 +311,13 @@ Ki.State = SC.Object.extend({
   /**
     Used to go to a given state's history state in the statechart either directly from this state if it
     is a current state or from one of this state's current substates. 
+    
+    Note that if the value given is a string, it will be assumed to be a path to a state. The path
+    will be relative to the statechart's root state; not relative to this state.
+    
+    @param state {Ki.State|String} the state whose history state to go to
+    @param recusive {Boolean} Optional. Indicates whether to follow history states recusively starting
+                              from the given state
   */
   gotoHistoryState: function(state, recursive) {
     var fromState = null;

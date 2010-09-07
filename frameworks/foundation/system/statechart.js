@@ -210,7 +210,6 @@ Ki.StatechartManager = {
   trace: NO,
   
   initMixin: function() {
-    this._registeredStates = [];
     this._gotoStateLocked = NO;
     this._sendEventLocked = NO;
     this._pendingStateTransitions = [];
@@ -242,13 +241,22 @@ Ki.StatechartManager = {
       throw "Unable to initialize statechart. Root state must be a state class";
     }
     
-    rootState = this._createRootState(rootState);
+    rootState = this.createRootState(rootState, { statechart: this, name: Ki.ROOT_STATE_NAME });
     this.set('rootState', rootState);
     rootState.initState();
     this.set('statechartIsInitialized', YES);
     this.gotoState(rootState);
     
     if (trace) SC.Logger.info('END initialize statechart');
+  },
+  
+  /**
+    Will create a root state for the statechart
+  */
+  createRootState: function(state, attrs) {
+    if (!attrs) attrs = {};
+    state = state.create(attrs);
+    return state;
   },
   
   /**
@@ -296,7 +304,7 @@ Ki.StatechartManager = {
     @returns {State} if a match then the matching state is returned, otherwise null is returned 
   */
   getState: function(value) {
-    return this._findMatchingState(value, this._registeredStates);
+    return this.get('rootState').findMatchingSubstate(value);
   },
   
   /**
@@ -335,10 +343,11 @@ Ki.StatechartManager = {
         exitStates = [],
         enterStates = [],
         trace = this.get('trace'),
+        rootState = this.get('rootState'),
         paramState = state,
         paramFromCurrentState = fromCurrentState;
     
-    state = this._findMatchingState(state, this._registeredStates);
+    state = rootState.findMatchingSubstate(state);
     
     if (SC.none(state)) {
       SC.Logger.error('Can not to goto state %@. Not a recognized state in statechart'.fmt(paramState));
@@ -364,8 +373,8 @@ Ki.StatechartManager = {
     
     if (!SC.none(fromCurrentState)) {
       // Check to make sure the current state given is actually a current state of this statechart
-      fromCurrentState = this._findMatchingState(fromCurrentState, this.get('currentStates'));
-      if (SC.none(fromCurrentState)) {
+      fromCurrentState = rootState.findMatchingSubstate(fromCurrentState);
+      if (SC.none(fromCurrentState) || !fromCurrentState.get('isCurrentState')) {
         var msg = 'Can not to goto state %@. %@ is not a recognized current state in statechart';
         SC.Logger.error(msg.fmt(paramState, paramFromCurrentState));
         this._gotoStateLocked = NO;
@@ -515,7 +524,7 @@ Ki.StatechartManager = {
       
     if (this.get('trace')) SC.Logger.info('exiting state: ' + state);
     
-    var result = state.exitState();
+    var result = this.exitState(state);
     
     if (this.get('monitorIsActive')) this.get('monitor').pushExitedState(state);
     state.set('currentSubstates', []);
@@ -524,13 +533,17 @@ Ki.StatechartManager = {
     return result;
   },
   
+  exitState: function(state) {
+    return state.exitState();
+  },
+  
   /** @private */
   _enterState: function(state, current) {
     var parentState = state.get('parentState');
     if (parentState && !state.get('isParallelState')) parentState.set('historyState', state);
     
     if (this.get('trace')) SC.Logger.info('entering state: ' + state);
-    var result = state.enterState();
+    var result = this.enterState(state);
     
     if (this.get('monitorIsActive')) this.get('monitor').pushEnteredState(state);
     
@@ -543,6 +556,10 @@ Ki.StatechartManager = {
     }
     
     return result;
+  },
+  
+  enterState: function(state) {
+    return state.enterState();
   },
   
   /**
@@ -571,7 +588,7 @@ Ki.StatechartManager = {
       return;
     }
     
-    state = this._findMatchingState(state, this._registeredStates);
+    state = this.getState(state);
   
     if (!state) {
       SC.Logger.error("Can not to goto state %@'s history state. Not a recognized state in statechart".fmt(state));
@@ -647,19 +664,6 @@ Ki.StatechartManager = {
     return responder ;
   },
 
-  /** @private
-  
-    States call this to register themselves with the statechart
-  */
-  _registerState: function(state) {
-    if (!SC.none(this.getState(state.get('name')))) {
-      var msg = 'can not register state %@ with statechart since there is already a registered state with name %@';
-      SC.Logger.error(msg.fmt(state, state.get('name')));
-      return;
-    }
-    this._registeredStates.push(state);
-  },
-  
   /** @private
   
     Creates a chain of states from the given state to the greatest ancestor state (the root state). Used
@@ -815,48 +819,6 @@ Ki.StatechartManager = {
       state = states[i];
       if (state !== exclude) this._traverseStatesToEnter(state, null, null, useHistory, gotoStateActions);
     }
-  },
-  
-  /** @private
-    
-    Will create a root state for the statechart
-  */
-  _createRootState: function(state, attrs) {
-    if (!attrs) attrs = {};
-    attrs.statechart = this;
-    attrs.name = Ki.ROOT_STATE_NAME;
-    state = state.create(attrs);
-    return state;
-  },
-  
-  /** @private
-  
-    Given a value, if there is a state that makes it, then it will be returned, otherwise
-    null will be returned.
-    
-    @param value {State|String} can either be a state object or the name of a state
-    @param states {Array} a list of states to match against
-    @returns {State} a match state or null
-  */
-  _findMatchingState: function(value, states) {
-    if (SC.none(value)) return null;
-    
-    var state = null,
-        i = 0,
-        len = states.length,
-        valueIsString = (SC.typeOf(value) === SC.T_STRING),
-        valueIsObject = (SC.typeOf(value) === SC.T_OBJECT);
-              
-    for (; i < len; i += 1) {
-      state = states[i];
-      if (valueIsString) {
-        if (state.get('name') === value) return state;
-      } else if (valueIsObject) {
-        if (state === value) return state;
-      }
-    }
-    
-    return null;
   },
   
   /** @private
