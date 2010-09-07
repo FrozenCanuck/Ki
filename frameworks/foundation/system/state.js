@@ -230,7 +230,7 @@ Ki.State = SC.Object.extend({
   },
   
   /**
-    Used to find a substate of this state that matches a given value. 
+    Used to get a substate of this state that matches a given value. 
     
     If the value is a state object, then the value will be returned if it is indeed 
     a substate of this state, otherwise null is returned. 
@@ -243,7 +243,7 @@ Ki.State = SC.Object.extend({
     Note that when the value is a string, it is assumed to be a path relative to this 
     state; not the root state of the statechart.
   */
-  findMatchingSubstate: function(value) {
+  getSubstate: function(value) {
     var valueType = SC.typeOf(value);
     
     // If the value is an object then just check if the value is 

@@ -179,11 +179,11 @@ test("access all A states relative to state B in statechart3", function() {
   var state,
       stateB = statechart3.getState('b');
       
-  state = stateB.findMatchingSubstate('a');
+  state = stateB.getSubstate('a');
   equals(SC.none(state), false, 'state a should not be null');
   equals(state.get('value'), 'state B.A', 'state a should have value "state B.A"');
   
-  state = stateB.findMatchingSubstate('c.a');
+  state = stateB.getSubstate('c.a');
   equals(SC.none(state), false, 'state c.a should not be null');
   equals(state.get('value'), 'state B.C.A', 'state a should have value "state B.C.A"');
 });
@@ -192,7 +192,7 @@ test("access all A states relative to state C in statechart3", function() {
   var state,
       stateC = statechart3.getState('c');
       
-  state = stateC.findMatchingSubstate('a');
+  state = stateC.getSubstate('a');
   equals(SC.none(state), false, 'state a should not be null');
   equals(state.get('value'), 'state B.C.A', 'state a should have value "state B.C.A"');
 });
@@ -234,19 +234,19 @@ test("access all states in statechart4", function() {
   state = statechart4.getState('y');
   equals(SC.none(state), true, 'state y should be null');
   
-  state = stateA.findMatchingSubstate('x');
+  state = stateA.getSubstate('x');
   equals(SC.none(state), false, 'state a.x should not be null');
   equals(state.get('value'), 'state A.X', 'state a should have value "state A.X"');
   
-  state = stateA.findMatchingSubstate('y');
+  state = stateA.getSubstate('y');
   equals(SC.none(state), false, 'state a.y should not be null');
   equals(state.get('value'), 'state A.Y', 'state a should have value "state A.Y"');
   
-  state = stateB.findMatchingSubstate('x');
+  state = stateB.getSubstate('x');
   equals(SC.none(state), false, 'state b.x should not be null');
   equals(state.get('value'), 'state B.X', 'state a should have value "state B.X"');
   
-  state = stateB.findMatchingSubstate('y');
+  state = stateB.getSubstate('y');
   equals(SC.none(state), false, 'state b.y should not be null');
   equals(state.get('value'), 'state B.Y', 'state a should have value "state B.Y"');
 });

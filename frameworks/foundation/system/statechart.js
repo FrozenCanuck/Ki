@@ -304,7 +304,7 @@ Ki.StatechartManager = {
     @returns {State} if a match then the matching state is returned, otherwise null is returned 
   */
   getState: function(value) {
-    return this.get('rootState').findMatchingSubstate(value);
+    return this.get('rootState').getSubstate(value);
   },
   
   /**
@@ -347,7 +347,7 @@ Ki.StatechartManager = {
         paramState = state,
         paramFromCurrentState = fromCurrentState;
     
-    state = rootState.findMatchingSubstate(state);
+    state = rootState.getSubstate(state);
     
     if (SC.none(state)) {
       SC.Logger.error('Can not to goto state %@. Not a recognized state in statechart'.fmt(paramState));
@@ -373,7 +373,7 @@ Ki.StatechartManager = {
     
     if (!SC.none(fromCurrentState)) {
       // Check to make sure the current state given is actually a current state of this statechart
-      fromCurrentState = rootState.findMatchingSubstate(fromCurrentState);
+      fromCurrentState = rootState.getSubstate(fromCurrentState);
       if (SC.none(fromCurrentState) || !fromCurrentState.get('isCurrentState')) {
         var msg = 'Can not to goto state %@. %@ is not a recognized current state in statechart';
         SC.Logger.error(msg.fmt(paramState, paramFromCurrentState));
