@@ -9,7 +9,7 @@ var statechart = null;
 // CONTENT CHANGING
 // 
 
-module("Ki.Statechart: With Parallel States - Goto State Basic Tests", {
+module("Ki.Statechart: With Concurrent States - Goto State Basic Tests", {
   setup: function() {
     
     statechart = Ki.Statechart.create({
@@ -18,7 +18,7 @@ module("Ki.Statechart: With Parallel States - Goto State Basic Tests", {
       
       rootState: Ki.State.design({
         
-        substatesAreParallel: YES,
+        substatesAreConcurrent: YES,
 
         a: Ki.State.design({
           initialSubstate: 'c',
@@ -116,7 +116,7 @@ test("from state c, go to state d, and from state e, go to state f", function() 
   equals(stateF.get('isCurrentState'), true, 'state f should be current state');
 });
 
-test("from state a, go to sibling parallel state b", function() {
+test("from state a, go to sibling concurrent state b", function() {
   var monitor = statechart.get('monitor'),
       stateA = statechart.getState('a'),
       stateB = statechart.getState('b');
@@ -124,7 +124,7 @@ test("from state a, go to sibling parallel state b", function() {
   monitor.reset();
   
   // Expect to get an error to be outputted in the JS console, which is what we want since
-  // the pivot state is the root state and it's substates are parallel
+  // the pivot state is the root state and it's substates are concurrent
   console.log('expecting to get an error...');
   stateA.gotoState('b');
   

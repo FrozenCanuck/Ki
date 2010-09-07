@@ -52,11 +52,11 @@ Ki.State = SC.Object.extend({
   
   /**
     Used to indicates if this state's immediate substates are to be
-    parallel (orthogonal) to each other. 
+    concurrent (orthogonal) to each other. 
     
     @property {Boolean}
   */
-  substatesAreParallel: NO,
+  substatesAreConcurrent: NO,
   
   /**
     The immediate substates of this state. Managed by the statechart.
@@ -101,7 +101,7 @@ Ki.State = SC.Object.extend({
         substates = [],
         matchedInitialSubstate = NO,
         initialSubstate = this.get('initialSubstate'),
-        substatesAreParallel = this.get('substatesAreParallel'),
+        substatesAreConcurrent = this.get('substatesAreConcurrent'),
         statechart = this.get('statechart'),
         i = 0,
         len = 0;
@@ -140,14 +140,14 @@ Ki.State = SC.Object.extend({
       }
     } 
     else if (substates.length > 0) {
-      if (SC.none(initialSubstate) && !substatesAreParallel) {
+      if (SC.none(initialSubstate) && !substatesAreConcurrent) {
         state = substates[0];
         this.set('initialSubstate', state);
         SC.Logger.warn('state %@ has no initial substate defined. Will default to using %@ as initial substate'.fmt(this, state));
       } 
-      else if (!SC.none(initialSubstate) && substatesAreParallel) {
+      else if (!SC.none(initialSubstate) && substatesAreConcurrent) {
         this.set('initialSubstate', null);
-        SC.Logger.warn('Can not use %@ as initial substate since substates are all parallel for state %@'.fmt(initialSubstate, this));
+        SC.Logger.warn('Can not use %@ as initial substate since substates are all concurrent for state %@'.fmt(initialSubstate, this));
       }
     }
     
@@ -340,7 +340,7 @@ Ki.State = SC.Object.extend({
   
   /**
     Used to check if a given state is a current substate of this state. Mainly used in cases
-    when this state is a parallel state.
+    when this state is a concurrent state.
     
     @param state {State|String} either a state object or the name of a state
     @returns {Boolean} true is the given state is a current substate, otherwise false is returned
@@ -369,12 +369,12 @@ Ki.State = SC.Object.extend({
   }.property(),
   
   /**
-    Indicates if this state is a parallel state
+    Indicates if this state is a concurrent state
     
     @property {Boolean}
   */
-  isParallelState: function() {
-    return this.getPath('parentState.substatesAreParallel');
+  isConcurrentState: function() {
+    return this.getPath('parentState.substatesAreConcurrent');
   }.property(),
   
   /**

@@ -9,7 +9,7 @@ var statechart = null;
 // CONTENT CHANGING
 // 
 
-module("Ki.Statechart: No Parallel States - Send Event Tests", {
+module("Ki.Statechart: No Concurrent States - Send Event Tests", {
   setup: function() {
 
     statechart = Ki.Statechart.create({

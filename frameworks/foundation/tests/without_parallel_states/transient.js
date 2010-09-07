@@ -9,7 +9,7 @@ var statechart;
 // CONTENT CHANGING
 // 
 
-module("Ki.Statechart: No Parallel States - Transient State Transition Tests", {
+module("Ki.Statechart: No Concurrent States - Transient State Transition Tests", {
   setup: function() {
 
     statechart = Ki.Statechart.create({

@@ -9,7 +9,7 @@ var statechart = null;
 // CONTENT CHANGING
 // 
 
-module("Ki.Statechart: With Parallel States - Goto State Asynchronous Tests", {
+module("Ki.Statechart: With Concurrent States - Goto State Asynchronous Tests", {
   setup: function() {
     
     var StateMixin = {
@@ -42,7 +42,7 @@ module("Ki.Statechart: With Parallel States - Goto State Asynchronous Tests", {
         
         b: Ki.State.design({
           
-          substatesAreParallel: YES,
+          substatesAreConcurrent: YES,
           
           c: Ki.State.design(StateMixin),
           

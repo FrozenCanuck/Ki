@@ -7,7 +7,7 @@
 Ki is a statechart framework that supports:
 
   * __State Hierarchy__ - nesting of states
-  * __State Orthogonality__ - state that are parallel (independent) of each other
+  * __State Orthogonality__ - state that are independent (concurrent) of each other
   * __State Clustering__ - grouping states together within a state 
   * __State History__ - keeping track of states that were entered, both shallow and deep history
   * __Event Handling__ - states reacting to incoming events

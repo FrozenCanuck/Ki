@@ -9,7 +9,7 @@ var statechart = null;
 // CONTENT CHANGING
 // 
 
-module("Ki.Statechart: With Parallel States - Goto History State Tests", {
+module("Ki.Statechart: With Concurrent States - Goto History State Tests", {
   setup: function() {
     
     statechart = Ki.Statechart.create({
@@ -22,7 +22,7 @@ module("Ki.Statechart: With Parallel States - Goto History State Tests", {
         
         x: Ki.State.design({
                 
-          substatesAreParallel: YES,
+          substatesAreConcurrent: YES,
           
           a: Ki.State.design({
             initialSubstate: 'c',

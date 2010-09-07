@@ -9,7 +9,7 @@ var statechart = null;
 // CONTENT CHANGING
 // 
 
-module("Ki.Statechart: No Parallel States - Goto History State Tests", {
+module("Ki.Statechart: No Concurrent States - Goto History State Tests", {
   setup: function() {
 
     statechart = Ki.Statechart.create({

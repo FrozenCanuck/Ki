@@ -15,7 +15,7 @@
   (www.wisdom.weizmann.ac.il/~harel/papers/Statecharts.pdf). 
   
   The statechart allows for complex state heircharies by nesting states within states, and 
-  allows for state orthogonally based on the use of parallel states.
+  allows for state orthogonally based on the use of concurrent states.
   
   At minimum, a statechart must have one state: The root state. All other states in the statechart
   are a decendents of the root state.
@@ -46,10 +46,10 @@
   Note how in the example above, the root state as an explicit initial substate to enter into. If no
   initial substate is provided, then the statechart will default to the the state's first substate.
   
-  To provide your statechart with orthogonality, you use parallel states. If you use parallel states,
-  then your statechart will have multiple current states. That is because each parallel state represents an
-  independent state structure from other parallel states. The following example shows how to provide your
-  statechart with parallel states:
+  To provide your statechart with orthogonality, you use concurrent states. If you use concurrent states,
+  then your statechart will have multiple current states. That is because each concurrent state represents an
+  independent state structure from other concurrent states. The following example shows how to provide your
+  statechart with concurrent states:
   
     {{{
     
@@ -57,7 +57,7 @@
       
         rootState: Ki.State.design({
       
-          substatesAreParallel: YES,
+          substatesAreConcurrent: YES,
         
           stateA: Ki.State.design({
             // ... can continue to nest further states
@@ -72,11 +72,11 @@
     
     }}}
   
-  Above, to indicate that a state's substates are parallel, you just have to set the substatesAreParallel to 
+  Above, to indicate that a state's substates are concurrent, you just have to set the substatesAreConcurrent to 
   YES. Once done, then stateA and stateB will be independent of each other and each will manage their
   own current substates. The root state will then have more then one current substate.
   
-  Remember that a startchart can have a mixture of nested and parallel states in order for you to 
+  Remember that a startchart can have a mixture of nested and concurrent states in order for you to 
   create as complex of statecharts that suite your needs. Here is an example of a mixed state structure:
   
     {{{
@@ -89,7 +89,7 @@
         
           stateA: Ki.State.design({
           
-            substatesAreParallel: YES,
+            substatesAreConcurrent: YES,
           
             stateM: Ki.State.design({ ... })
             stateN: Ki.State.design({ ... })
@@ -121,7 +121,7 @@
   
       MyApp.StateA = Ki.State.extend({
     
-        substatesAreParallel: YES,
+        substatesAreConcurrent: YES,
     
         stateM: Ki.State.design({ ... })
         stateN: Ki.State.design({ ... })
@@ -133,7 +133,7 @@
     
       MyApp.StateB = Ki.State.extend({
     
-        substatesAreParallel: YES,
+        substatesAreConcurrent: YES,
     
         stateM: Ki.State.design({ ... })
         stateN: Ki.State.design({ ... })
@@ -314,13 +314,13 @@ Ki.StatechartManager = {
     be exited or entered in a specific order.
     
     The state that is given to go to will necessarily be a current state when the state transition process
-    is complete. The final state or states are dependent on factors such an initial substates, parallel 
-    parallel states, and history states.
+    is complete. The final state or states are dependent on factors such an initial substates, concurrent 
+    states, and history states.
     
     Because the statechart can have one or more states, it may be necessary to indicate what current state
     to start from. If no current state to start from is provided, then the statechart will default to using
-    the first current state that it has; depending of the make up of the statechart (no parallel state vs.
-    with parallel states), the outcome may be unexpected. For a statechart with parallel states, it is best
+    the first current state that it has; depending of the make up of the statechart (no concurrent state vs.
+    with concurrent states), the outcome may be unexpected. For a statechart with concurrent states, it is best
     to provide a current state in which to start from.
     
     When using history states, the statechart will first make transitions to the given state then use that
@@ -407,8 +407,8 @@ Ki.StatechartManager = {
 
     if (pivotState) {
       if (trace) SC.Logger.info('pivot state = ' + pivotState);
-      if (pivotState.get('substatesAreParallel')) {
-        SC.Logger.error('Can not go to state %@. Pivot state %@ has parallel substates.'.fmt(state, pivotState));
+      if (pivotState.get('substatesAreConcurrent')) {
+        SC.Logger.error('Can not go to state %@. Pivot state %@ has concurrent substates.'.fmt(state, pivotState));
         this._gotoStateLocked = NO;
         return;
       }
@@ -540,7 +540,7 @@ Ki.StatechartManager = {
   /** @private */
   _enterState: function(state, current) {
     var parentState = state.get('parentState');
-    if (parentState && !state.get('isParallelState')) parentState.set('historyState', state);
+    if (parentState && !state.get('isConcurrentState')) parentState.set('historyState', state);
     
     if (this.get('trace')) SC.Logger.info('entering state: ' + state);
     var result = this.enterState(state);
@@ -572,10 +572,10 @@ Ki.StatechartManager = {
     history states. If the given state does not have a history state, then the statechart will just follow
     normal procedures when making state transitions.
     
-    Because a statechart can have one or more current states, depending on if the statechart has any parallel
+    Because a statechart can have one or more current states, depending on if the statechart has any concurrent
     states, it is optional to provided current state in which to start the state transition process from. If no
     current state is provided, then the statechart will default to the first current state that it has; which, 
-    depending on the make up of that statechart, can lead to unexpected outcomes. For a statechart with parallel
+    depending on the make up of that statechart, can lead to unexpected outcomes. For a statechart with concurrent
     states, it is best to explicitly supply a current state.
     
     @param state {State|String} the state to go to and follow it's history state
@@ -711,9 +711,9 @@ Ki.StatechartManager = {
     
     var trace = this.get('trace');
     
-    // This state has parallel substates. Therefore we have to make sure we
+    // This state has concurrent substates. Therefore we have to make sure we
     // exit them up to this state before we can go any further up the exit chain.
-    if (state.get('substatesAreParallel')) {
+    if (state.get('substatesAreConcurrent')) {
       var i = 0,
           currentSubstates = state.get('currentSubstates'),
           len = currentSubstates.length,
@@ -737,7 +737,7 @@ Ki.StatechartManager = {
     Recursively follow states that are to be entred during the state transition process. The
     enter process is to start from the given state and work its way down a given enter path. When
     the end of enter path has been reached, then continue entering states based on whether 
-    an initial substate is defined, there are parallel substates or history states are to be
+    an initial substate is defined, there are concurrent substates or history states are to be
     followed; when none of those condition are met then the enter process is done.
     
     @param state {State} the sate to be entered
@@ -769,9 +769,9 @@ Ki.StatechartManager = {
       var initialSubstate = state.get('initialSubstate'),
           historyState = state.get('historyState');
       
-      // State has parallel substates. Need to enter all of the substates
-      if (state.get('substatesAreParallel')) {
-        this._traverseParallelStatesToEnter(state.get('substates'), null, useHistory, gotoStateActions);
+      // State has concurrent substates. Need to enter all of the substates
+      if (state.get('substatesAreConcurrent')) {
+        this._traverseConcurrentStatesToEnter(state.get('substates'), null, useHistory, gotoStateActions);
       }
       
       // State has substates and we are instructed to recursively follow the state's
@@ -798,19 +798,19 @@ Ki.StatechartManager = {
       var nextState = enterStatePath.pop();
       this._traverseStatesToEnter(nextState, enterStatePath, null, useHistory, gotoStateActions); 
       
-      // We hit a state that has parallel substates. Must go through each of the substates
+      // We hit a state that has concurrent substates. Must go through each of the substates
       // and enter them
-      if (state.get('substatesAreParallel')) {
-        this._traverseParallelStatesToEnter(state.get('substates'), nextState, useHistory, gotoStateActions);
+      if (state.get('substatesAreConcurrent')) {
+        this._traverseConcurrentStatesToEnter(state.get('substates'), nextState, useHistory, gotoStateActions);
       }
     }
   },
   
   /** @private
   
-    Iterate over all the given parallel states and enter them
+    Iterate over all the given concurrent states and enter them
   */
-  _traverseParallelStatesToEnter: function(states, exclude, useHistory, gotoStateActions) {
+  _traverseConcurrentStatesToEnter: function(states, exclude, useHistory, gotoStateActions) {
     var i = 0,
         len = states.length,
         state = null;
