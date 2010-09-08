@@ -11,11 +11,14 @@ Ki.StatechartMonitor = SC.Object.extend({
   sequence: null,
   
   init: function() {
+    sc_super();
     this.reset();
   },
   
   reset: function() {
+    this.propertyWillChange('length');
     this.sequence = [];
+    this.propertyDidChange('length');
   },
   
   length: function() {
@@ -23,11 +26,15 @@ Ki.StatechartMonitor = SC.Object.extend({
   }.property(),
   
   pushEnteredState: function(state) {
+    this.propertyWillChange('length');
     this.sequence.push({ entered: state });
+    this.propertyDidChange('length'); 
   },
   
   pushExitedState: function(state) {
+    this.propertyWillChange('length');
     this.sequence.push({ exited: state });
+    this.propertyDidChange('length');
   },
   
   matchSequence: function() {
