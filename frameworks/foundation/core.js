@@ -4,5 +4,5 @@
 // License:   Licensed under MIT license (see license.js)
 // ==========================================================================
 
-var Ki = Ki || SC.Object.create();
-var KI = KI || Ki ;
+window.Ki = window.Ki || SC.Object.create();
+window.KI = window.KI || window.Ki ;
