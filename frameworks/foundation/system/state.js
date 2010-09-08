@@ -10,8 +10,9 @@
   Represents a state within a statechart. 
   
   The statechart actively manages all states belonging to it. When a state is created, 
-  it immediately registers itself with the statechart it is owned by. You do 
-  not create an instance of a state itself. The statechart manager will go through its 
+  it immediately registers itself with it parent states. 
+  
+  You do not create an instance of a state itself. The statechart manager will go through its 
   state heirarchy and create the states itself.
 */
 Ki.State = SC.Object.extend({
@@ -81,7 +82,7 @@ Ki.State = SC.Object.extend({
   stateIsInitialized: NO,
   
   /**
-    An array of this state current substates. Managed by the statechart
+    An array of this state's current substates. Managed by the statechart
     
     @propety {Array}
   */
@@ -106,7 +107,7 @@ Ki.State = SC.Object.extend({
         i = 0,
         len = 0;
     
-    // Iterate through all this states substates, if any, create them, and then initialize
+    // Iterate through all this state's substates, if any, create them, and then initialize
     // them. This causes a recursive process.
     for (key in this) {
       value = this[key];
@@ -473,6 +474,26 @@ Ki.State = SC.Object.extend({
 /**
   Use this when you want to plug-in a state into a statechart. This is beneficial
   in cases where you split your statechart's states up into multiple files.
+  
+  Example:
+  
+    {{{
+    
+      MyApp.statechart = Ki.Statechart.create({
+      
+        rootState: Ki.State.design({
+        
+          initialSubstate: 'a',
+          
+          a: Ki.State.plugin('path.to.a.state.class'),
+          
+          b: Ki.State.pluing('path.to.another.state.class)
+        
+        })
+      
+      })
+    
+    }}}
   
   @param value {String} property path to a state class
 */

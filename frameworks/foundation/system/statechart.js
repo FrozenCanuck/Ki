@@ -15,10 +15,10 @@
   (www.wisdom.weizmann.ac.il/~harel/papers/Statecharts.pdf). 
   
   The statechart allows for complex state heircharies by nesting states within states, and 
-  allows for state orthogonally based on the use of concurrent states.
+  allows for state orthogonality based on the use of concurrent states.
   
   At minimum, a statechart must have one state: The root state. All other states in the statechart
-  are a decendents of the root state.
+  are a decendents (substates) of the root state.
   
   The following example shows how states are nested within a statechart:
   
@@ -182,7 +182,7 @@ Ki.StatechartManager = {
   /**
     The root state of this statechart. All statecharts must have a root state.
     
-    @property {State}
+    @property {Ki.State}
   */
   rootState: null,
   
@@ -309,27 +309,27 @@ Ki.StatechartManager = {
   
   /**
     When called, the statechart will proceed with making state transitions in the statechart starting from 
-    currents state that meet the statechart conditions. When complete, some or all of the statechart's 
+    a current state that meet the statechart conditions. When complete, some or all of the statechart's 
     current states will be changed, and all states that were part of the transition process will either 
     be exited or entered in a specific order.
     
-    The state that is given to go to will necessarily be a current state when the state transition process
+    The state that is given to go to will not necessarily be a current state when the state transition process
     is complete. The final state or states are dependent on factors such an initial substates, concurrent 
     states, and history states.
     
-    Because the statechart can have one or more states, it may be necessary to indicate what current state
+    Because the statechart can have one or more current states, it may be necessary to indicate what current state
     to start from. If no current state to start from is provided, then the statechart will default to using
     the first current state that it has; depending of the make up of the statechart (no concurrent state vs.
     with concurrent states), the outcome may be unexpected. For a statechart with concurrent states, it is best
     to provide a current state in which to start from.
     
-    When using history states, the statechart will first make transitions to the given state then use that
+    When using history states, the statechart will first make transitions to the given state and then use that
     state's history state and recursively follow each history state's history state until there are no 
     more history states to follow. If the given state does not have a history state, then the statechart
     will continue following state transition procedures.
     
-    @param state {State|String} state the state to go to (may not be the final state in the transition process)
-    @param fromCurrentState {State|String} Optional. The current state to start the transition process from.
+    @param state {Ki.State|String} the state to go to (may not be the final state in the transition process)
+    @param fromCurrentState {Ki.State|String} Optional. The current state to start the transition process from.
     @param useHistory {Boolean} Optional. Indicates whether to include using history states in the transition process
   */
   gotoState: function(state, fromCurrentState, useHistory) {
@@ -417,10 +417,10 @@ Ki.StatechartManager = {
     // Collect what actions to perform for the state transition process
     var gotoStateActions = [];
     
-    // Go ahead and exit states recursively
+    // Go ahead and find states that are to be exited
     this._traverseStatesToExit(exitStates.shift(), exitStates, pivotState, gotoStateActions);
     
-    // Now enter states recursively
+    // Now go find states that are to entered
     if (pivotState !== state) {
       this._traverseStatesToEnter(enterStates.pop(), enterStates, pivotState, useHistory, gotoStateActions);
     } else {
@@ -578,8 +578,8 @@ Ki.StatechartManager = {
     depending on the make up of that statechart, can lead to unexpected outcomes. For a statechart with concurrent
     states, it is best to explicitly supply a current state.
     
-    @param state {State|String} the state to go to and follow it's history state
-    @param fromCurrentState {State|String} Optional. the current state to start the state transition process from
+    @param state {Ki.State|String} the state to go to and follow it's history state
+    @param fromCurrentState {Ki.State|String} Optional. the current state to start the state transition process from
     @param recursive {Boolean} Optional. whether to follow history states recursively.
   */
   gotoHistoryState: function(state, fromCurrentState, recursive) {
@@ -780,13 +780,13 @@ Ki.StatechartManager = {
         this._traverseStatesToEnter(historyState, null, null, useHistory, gotoStateActions);
       }
       
-      // State has an initial substate to ener
+      // State has an initial substate to enter
       else if (initialSubstate) {
         this._traverseStatesToEnter(initialSubstate, null, null, useHistory, gotoStateActions);  
       } 
       
       // Looks like we hit the end of the road. Therefore the state has now become
-      // a current state if the statechart.
+      // a current state of the statechart.
       else {
         gotoStateAction.currentState = YES;
       }
