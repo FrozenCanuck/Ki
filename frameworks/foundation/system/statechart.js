@@ -542,11 +542,6 @@ Ki.StatechartManager = {
     var parentState = state.get('parentState');
     if (parentState && !state.get('isConcurrentState')) parentState.set('historyState', state);
     
-    if (this.get('trace')) SC.Logger.info('entering state: ' + state);
-    var result = this.enterState(state);
-    
-    if (this.get('monitorIsActive')) this.get('monitor').pushEnteredState(state);
-    
     if (current) {
       parentState = state;
       while (parentState) {
@@ -554,6 +549,11 @@ Ki.StatechartManager = {
         parentState = parentState.get('parentState');
       }
     }
+    
+    if (this.get('trace')) SC.Logger.info('entering state: ' + state);
+    var result = this.enterState(state);
+    
+    if (this.get('monitorIsActive')) this.get('monitor').pushEnteredState(state);
     
     return result;
   },
