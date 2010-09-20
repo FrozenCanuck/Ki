@@ -237,6 +237,10 @@ Ki.StatechartManager = {
     
     if (trace) SC.Logger.info('BEGIN initialize statechart');
     
+    if (SC.typeOf(rootState) === SC.T_FUNCTION && rootState.statePlugin) {
+      rootState = rootState.apply(this);
+    }
+    
     if (!(SC.kindOf(rootState, Ki.State) && rootState.isClass)) {
       throw "Unable to initialize statechart. Root state must be a state class";
     }
