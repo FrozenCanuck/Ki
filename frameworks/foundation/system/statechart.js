@@ -279,7 +279,7 @@ Ki.StatechartManager = {
   */
   currentStateCount: function() {
     return this.getPath('currentStates.length');
-  }.property(),
+  }.property('currentStates'),
   
   /**
     Checks if a given state is a current state of this statechart. 
@@ -504,6 +504,8 @@ Ki.StatechartManager = {
       }
     }
     
+    this.notifyPropertyChange('currentStates');
+    
     if (this.get('trace')) {
       SC.Logger.info('current states after: %@'.fmt(this.get('currentStates')));
       SC.Logger.info('END gotoState: %@'.fmt(gotoState));
@@ -529,6 +531,7 @@ Ki.StatechartManager = {
     if (this.get('trace')) SC.Logger.info('exiting state: ' + state);
     
     var result = this.exitState(state);
+    state.notifyPropertyChange('isConcurrentState');
     
     if (this.get('monitorIsActive')) this.get('monitor').pushExitedState(state);
     state.set('currentSubstates', []);
@@ -555,7 +558,9 @@ Ki.StatechartManager = {
     }
     
     if (this.get('trace')) SC.Logger.info('entering state: ' + state);
+    
     var result = this.enterState(state);
+    state.notifyPropertyChange('isConcurrentState');
     
     if (this.get('monitorIsActive')) this.get('monitor').pushEnteredState(state);
     
