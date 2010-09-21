@@ -215,10 +215,7 @@ Ki.StatechartManager = {
     this._pendingStateTransitions = [];
     this._pendingSentEvents = [];
     
-    // Alias method
     this.sendAction = this.sendEvent;
-    this.goState = this.gotoState;
-    this.goHistoryState = this.gotoHistoryState;
     
     if (this.get('monitorIsActive')) {
       this.set('monitor', Ki.StatechartMonitor.create());
