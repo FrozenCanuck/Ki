@@ -655,7 +655,7 @@ Ki.StatechartManager = {
       while (!eventHandled && responder) {
         if (responder.tryToPerform) {
           try {
-            eventHandled = responder.tryToPerform(event, sender, context);
+            eventHandled = responder.tryToHandleEvent(event, sender, context);
           } catch (ex) { /** Gobal the exception and move on */ }
         }
         if (!eventHandled) responder = responder.get('parentState');

@@ -88,6 +88,12 @@ Ki.State = SC.Object.extend({
   */
   currentSubstates: null,
   
+  init: function() {
+    this._registeredEventHandlers = {};
+    this._registeredStringEventHandlers = {};
+    this._registeredRegExpEventHandlers = [];
+  },
+  
   /**
     Used to initialize this state. To only be called by the owning statechart.
   */
@@ -105,14 +111,21 @@ Ki.State = SC.Object.extend({
         substatesAreConcurrent = this.get('substatesAreConcurrent'),
         statechart = this.get('statechart'),
         i = 0,
-        len = 0;
+        len = 0,
+        valueIsFunc = NO;
     
     // Iterate through all this state's substates, if any, create them, and then initialize
     // them. This causes a recursive process.
     for (key in this) {
       value = this[key];
+      valueIsFunc = SC.typeOf(value) === SC.T_FUNCTION;
       
-      if (SC.typeOf(value) === SC.T_FUNCTION && value.statePlugin) {
+      if (valueIsFunc && value.isEventHandler) {
+        this._registerEventHandler(key, value);
+        continue;
+      }
+      
+      if (valueIsFunc && value.statePlugin) {
         value = value.apply(this);
       }
       
@@ -162,6 +175,45 @@ Ki.State = SC.Object.extend({
     if (!attrs) attrs = {};
     state = state.create(attrs);
     return state;
+  },
+  
+  /** @private 
+  
+    Registers event handlers with this state. Event handlers are special
+    functions on the state that are intended to handle more than one event. This
+    compared to basic functions that only respond to a single event that reflects
+    the name of the method.
+  */
+  _registerEventHandler: function(name, handler) {
+    var events = handler.events,
+        event = null,
+        len = events.length,
+        i = 0;
+        
+    this._registeredEventHandlers[name] = handler;
+    
+    for (; i < len; i += 1) {
+      event = events[i];
+      
+      if (SC.typeOf(event) === SC.T_STRING) {
+        this._registeredStringEventHandlers[event] = {
+          name: name,
+          handler: handler
+        };
+        continue;
+      }
+      
+      if (event instanceof RegExp) {
+        this._registeredRegExpEventHandlers.push({
+          name: name,
+          handler: handler,
+          regexp: event
+        });
+        continue;
+      }
+      
+      SC.Logger.error("Invalid event %@ for event handler %@ in state %@".fmt(event, name, this));
+    }
   },
   
   /** @private
@@ -409,6 +461,97 @@ Ki.State = SC.Object.extend({
   },
   
   /**
+    Called by the statechart to allow a state to try and handle the given event. If the
+    event is handled by the state then YES is returned, otherwise NO.
+    
+    There is a particular order in how an event is handled by a state:
+    
+      1) Basic function whose name matches the event
+      2) Registered event handler that is associated with an event represented as a string
+      3) Registered event handler that is associated with events matching a regular expression
+      4) The unknownEvent function
+      
+    Use of event handlers that are associated with events matching a regular expression may
+    incur a performance hit, so they should be used sparingly.
+    
+    The unknownEvent function is only invoked if the state has it, otherwise it is skipped. Note that
+    you should be careful when using unknownEvent since it can be either abused or cause unexpected
+    behavior.
+    
+    Example of a state using all four event handling techniques:
+    
+    {{{
+    
+      Ki.State.extend({
+      
+        // Basic function handling event 'foo'
+        foo: function(sender, context) { ... },
+        
+        // event handler that handles 'frozen' and 'canuck'
+        eventHandlerA: function(event, sender, context) {
+          ...
+        }.handleEvent('frozen', 'canuck'),
+        
+        // event handler that handles events matching the regular expression /num\d/
+        //   ex. num1, num2
+        eventHandlerB: function(event, sender, context) {
+          ...
+        }.handleEvent(/num\d/),
+        
+        // Handle any event that was not handled by some other
+        // method on the state
+        unknownEvent: function(event, sender, context) {
+        
+        }
+      
+      })
+    
+    }}}
+  */
+  tryToHandleEvent: function(event, sender, context) {
+        
+    // First check if the name of the event is the same as a registered event handler. If so,
+    // then do not handle the event.
+    if (this._registeredEventHandlers[event]) {
+      SC.Logger.warn("state %@ can not handle event %@ since it is a registered event handler".fmt(this, event));
+      return NO;
+    }    
+    
+    // Now begin by trying a basic method on the state to respond to the event
+    if (this.tryToPerform(event, sender, context)) return YES;
+    
+    // Try an event handler that is associated with an event represented as a string
+    var handler = this._registeredStringEventHandlers[event];
+    if (handler) {
+      handler.handler.call(this, event, sender, context);
+      return YES;
+    }
+    
+    // Try an event handler that is associated with events matching a regular expression
+    
+    var len = this._registeredRegExpEventHandlers.length,
+        i = 0;
+        
+    for (; i < len; i += 1) {
+      handler = this._registeredRegExpEventHandlers[i];
+      if (event.match(handler.regexp)) {
+        handler.handler.call(this, event, sender, context);
+        return YES;
+      }
+    }
+    
+    // Final attempt. If the state has an unknownEvent function then invoke it to 
+    // handle the event
+    if (SC.typeOf(this['unknownEvent']) === SC.T_FUNCTION) {
+      this.unknownEvent(event, sender, context);
+      return YES;
+    }
+    
+    // Nothing was able to handle the given event for this state
+    return NO;
+  },
+  
+  /**
     Called whenever this state is to be entered during a state transition process. This 
     is useful when you want the state to perform some initial set up procedures. 
     
@@ -506,3 +649,61 @@ Ki.State.plugin = function(value) {
 };
 
 Ki.State.design = Ki.State.extend;
+
+/**
+  Extends the JS Function object with the handleEvents method that
+  will provide more advanced event handling capabilities when constructing
+  your statechart's states.
+  
+  By default, when you add a method to a state, the state will react to 
+  events that matches a method's name, like so:
+  
+  {{{
+  
+    state = Ki.State.extend({
+    
+      // Will be invoked when a event named "foo" is sent to this state
+      foo: function(event, sender, context) { ... }
+    
+    })
+  
+  }}}
+  
+  In some situations, it may be advantageous to use one method that can react to 
+  multiple events instead of having multiple methods that essentially all do the
+  same thing. In order to set a method to handle more than one event you use
+  the handleEvents method which can be supplied a list of string and/or regular
+  expressions. The following example demonstrates the use of handleEvents:
+  
+  {{{
+  
+    state = Ki.State.extend({
+    
+      eventHandlerA: function(event, sender, context) {
+      
+      }.handleEvents('foo', 'bar'),
+      
+      eventHandlerB: function(event, sender, context) {
+      
+      }.handleEvents(/num\d/, 'decimal')
+    
+    })
+  
+  }}}
+  
+  Whenever events 'foo' and 'bar' are sent to the state, the method eventHandlerA
+  will be invoked. When there is an event that matches the regular expression
+  /num\d/ or the event is 'decimal' then eventHandlerB is invoked. In both 
+  cases, the name of the event will be supplied to the event handler. 
+  
+  It should be noted that the use of regular expressions may impact performance
+  since that statechart will not be able to fully optimize the event handling logic based
+  on its use. Therefore the use of regular expression should be used sparingly. 
+  
+  @param {(String|RegExp)...} args
+*/
+Function.prototype.handleEvents = function() {
+  this.isEventHandler = YES;
+  this.events = arguments;
+  return this;
+};
