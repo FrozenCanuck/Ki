@@ -1,4 +1,4 @@
-# ki 0.1.0 2010-09-07
+# ki 0.1.0 September 7, 2010
 
 * First beta release of Ki
 * Features:
