@@ -527,11 +527,12 @@ Ki.StatechartManager = {
       
     if (this.get('trace')) SC.Logger.info('exiting state: ' + state);
     
+    state.set('currentSubstates', []);
+    state.notifyPropertyChange('isCurrentState');
     var result = this.exitState(state);
-    state.notifyPropertyChange('isConcurrentState');
     
     if (this.get('monitorIsActive')) this.get('monitor').pushExitedState(state);
-    state.set('currentSubstates', []);
+    
     state._traverseStatesToExit_skipState = NO;
     
     return result;
@@ -556,8 +557,8 @@ Ki.StatechartManager = {
     
     if (this.get('trace')) SC.Logger.info('entering state: ' + state);
     
+    state.notifyPropertyChange('isCurrentState');
     var result = this.enterState(state);
-    state.notifyPropertyChange('isConcurrentState');
     
     if (this.get('monitorIsActive')) this.get('monitor').pushEnteredState(state);
     

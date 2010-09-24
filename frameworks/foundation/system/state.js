@@ -419,7 +419,7 @@ Ki.State = SC.Object.extend({
   */
   isCurrentState: function() {
     return this.stateIsCurrentSubstate(this);
-  }.property(),
+  }.property().cacheable(),
   
   /**
     Indicates if this state is a concurrent state
