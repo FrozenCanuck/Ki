@@ -331,9 +331,10 @@ Ki.StatechartManager = {
     
     @param state {Ki.State|String} the state to go to (may not be the final state in the transition process)
     @param fromCurrentState {Ki.State|String} Optional. The current state to start the transition process from.
+    @param context Any value that you want to be supplied to states that will be entered. Can be null.
     @param useHistory {Boolean} Optional. Indicates whether to include using history states in the transition process
   */
-  gotoState: function(state, fromCurrentState, useHistory) {
+  gotoState: function(state, fromCurrentState, context, useHistory) {
     
     if (!this.get('statechartIsInitialized')) {
       SC.Logger.error('can not go to state %@. statechart has not yet been initialized'.fmt(state));
@@ -362,6 +363,7 @@ Ki.StatechartManager = {
       this._pendingStateTransitions.push({
         state: state,
         fromCurrentState: fromCurrentState,
+        context: context,
         useHistory: useHistory
       });
       
@@ -430,7 +432,7 @@ Ki.StatechartManager = {
     }
     
     // Collected all the state transition actions to be performed. Now execute them.
-    this._executeGotoStateActions(state, gotoStateActions);
+    this._executeGotoStateActions(state, gotoStateActions, context);
   },
   
   /**
@@ -458,11 +460,11 @@ Ki.StatechartManager = {
     }
     
     var point = this._gotoStateSuspendedPoint;
-    this._executeGotoStateActions(point.gotoState, point.actions, point.marker);
+    this._executeGotoStateActions(point.gotoState, point.actions, point.context, point.marker);
   },
   
   /** @private */
-  _executeGotoStateActions: function(gotoState, actions, marker) {
+  _executeGotoStateActions: function(gotoState, actions, context, marker) {
     var action = null,
         len = actions.length,
         actionResult = null;
@@ -477,7 +479,7 @@ Ki.StatechartManager = {
           break;
           
         case Ki.ENTER_STATE:
-          actionResult = this._enterState(action.state, action.currentState);
+          actionResult = this._enterState(action.state, action.currentState, context);
           break;
       }
       
@@ -493,6 +495,7 @@ Ki.StatechartManager = {
         this._gotoStateSuspendedPoint = {
           gotoState: gotoState,
           actions: actions,
+          context: context,
           marker: marker + 1
         }; 
         
@@ -543,7 +546,7 @@ Ki.StatechartManager = {
   },
   
   /** @private */
-  _enterState: function(state, current) {
+  _enterState: function(state, current, context) {
     var parentState = state.get('parentState');
     if (parentState && !state.get('isConcurrentState')) parentState.set('historyState', state);
     
@@ -558,15 +561,15 @@ Ki.StatechartManager = {
     if (this.get('trace')) SC.Logger.info('entering state: ' + state);
     
     state.notifyPropertyChange('isCurrentState');
-    var result = this.enterState(state);
+    var result = this.enterState(state, context);
     
     if (this.get('monitorIsActive')) this.get('monitor').pushEnteredState(state);
     
     return result;
   },
   
-  enterState: function(state) {
-    return state.enterState();
+  enterState: function(state, context) {
+    return state.enterState(context);
   },
   
   /**
@@ -587,9 +590,10 @@ Ki.StatechartManager = {
     
     @param state {Ki.State|String} the state to go to and follow it's history state
     @param fromCurrentState {Ki.State|String} Optional. the current state to start the state transition process from
+    @param context any value to pass along to states that will be entered. can be null
     @param recursive {Boolean} Optional. whether to follow history states recursively.
   */
-  gotoHistoryState: function(state, fromCurrentState, recursive) {
+  gotoHistoryState: function(state, fromCurrentState, context, recursive) {
     if (!this.get('statechartIsInitialized')) {
       SC.Logger.error("can not go to state %@'s history state. Statechart has not yet been initialized".fmt(state));
       return;
@@ -606,12 +610,12 @@ Ki.StatechartManager = {
     
     if (!recursive) { 
       if (historyState) {
-        this.gotoState(historyState, fromCurrentState);
+        this.gotoState(historyState, fromCurrentState, context);
       } else {
-        this.gotoState(state, fromCurrentState);
+        this.gotoState(state, fromCurrentState, context);
       }
     } else {
-      this.gotoState(state, fromCurrentState, YES);
+      this.gotoState(state, fromCurrentState, context, YES);
     }
   },
   
@@ -836,7 +840,7 @@ Ki.StatechartManager = {
   _flushPendingStateTransition: function() {
     var pending = this._pendingStateTransitions.shift();
     if (!pending) return;
-    this.gotoState(pending.state, pending.fromCurrentState, pending.useHistory);
+    this.gotoState(pending.state, pending.fromCurrentState, pending.context, pending.useHistory);
   },
   
   /** @private

@@ -157,7 +157,7 @@ test("go to state j, then state m, then go to state a's history state (recursive
   statechart.gotoState('m');
 
   monitor.reset();
-  statechart.gotoHistoryState('a', null, YES);
+  statechart.gotoHistoryState('a', null, null, YES);
   
   equals(monitor.get('length'), 6, 'initial state sequence should be of length 6');
   equals(monitor.matchSequence().begin().exited('m', 'f', 'b').entered('a', 'd', 'j').end(), true, 'sequence should be exited[m, f, b], entered[a, d, j]');
@@ -188,7 +188,7 @@ test("go to state b's history state (recursive)", function() {
   var monitor = statechart.get('monitor');
   monitor.reset();
 
-  statechart.gotoHistoryState('b', null, YES);
+  statechart.gotoHistoryState('b', null, null, YES);
   
   equals(monitor.get('length'), 6, 'initial state sequence should be of length 6');
   equals(monitor.matchSequence().begin().exited('g', 'c', 'a').entered('b', 'e', 'k').end(), true, 'sequence should be exited[g, c, a], entered[b, e, k]');
