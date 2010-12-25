@@ -1,7 +1,7 @@
 /*! @license
 ==========================================================================
 Ki -- A Statechart Framework for Sproutcore
-copyright 2010, Michael Cohen, and contributors. All rights reserved.
+copyright 2010, 2011 Michael Cohen, and contributors. All rights reserved.
 
 Some portions of the Ki framework were derived from the statechart 
 framework in SproutCore whose original authors consist of Michael Ball, 
