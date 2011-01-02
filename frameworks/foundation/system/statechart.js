@@ -110,7 +110,7 @@
     
     }}}
   
-  Deeping on your needs, a statechart can have lots of states, which can become hard to manage all within
+  Depending on your needs, a statechart can have lots of states, which can become hard to manage all within
   one file. To modularize your states and make them easier to manage and maintain, you can plug-in states
   into other states. Let's say we are using the statechart in the last example above, and all the code is 
   within one file. We could update the code and split the logic across two or more files like so:
@@ -148,9 +148,9 @@
     
           initialSubstate: 'stateA',
       
-          stateA: Ki.State.plugin('MyApp.stateA'),
+          stateA: Ki.State.plugin('MyApp.StateA'),
       
-          stateB: Ki.State.plugin('MyApp.stateB')
+          stateB: Ki.State.plugin('MyApp.StateB')
         
         })
     
