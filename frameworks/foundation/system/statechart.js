@@ -208,7 +208,13 @@ Ki.StatechartManager = {
   */
   trace: NO,
   
-  initMixin: function() {
+  /**
+    Initializes the statechart. By initializing the statechart, it will create all the states and register
+    them with the statechart. Once complete, the statechart can be used to go to states and send events to.
+  */
+  initStatechart: function() {
+    if (this.get('statechartIsInitialized')) return;
+    
     this._gotoStateLocked = NO;
     this._sendEventLocked = NO;
     this._pendingStateTransitions = [];
@@ -219,14 +225,6 @@ Ki.StatechartManager = {
     if (this.get('monitorIsActive')) {
       this.set('monitor', Ki.StatechartMonitor.create());
     }
-  },
-  
-  /**
-    Initializes the statechart. By initializing the statechart, it will create all the states and register
-    them with the statechart. Once complete, the statechart can be used to go to states and send events to.
-  */
-  initStatechart: function() {
-    if (this.get('statechartIsInitialized')) return;
     
     var trace = this.get('trace'),
         rootState = this.get('rootState');
@@ -833,6 +831,10 @@ Ki.StatechartManager = {
     pending queue.
   */
   _flushPendingStateTransition: function() {
+    if (!this._pendingStateTransitions) {
+      SC.Logger.error('Unable to flush pending state transition. _pendingStateTransitions is invalid');
+      return;
+    }
     var pending = this._pendingStateTransitions.shift();
     if (!pending) return;
     this.gotoState(pending.state, pending.fromCurrentState, pending.useHistory);
