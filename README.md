@@ -80,3 +80,8 @@ Once acquired, you then need to update your project's `Buildfile` file. This can
     config :all, :required => [:sproutcore, :ki]
   
 Congrats! You're now on your way to using Ki.
+
+#Getting Started
+
+If you're new to Ki or just want information to help you apply statecharts to your app, then refer to the 
+[Ki wiki](http://github.com/FrozenCanuck/Ki/wiki).
