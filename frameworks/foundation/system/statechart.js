@@ -786,6 +786,10 @@ Ki.StatechartManager = {
       
       // State has an initial substate to enter
       else if (initialSubstate) {
+        if (SC.kindOf(initialSubstate, Ki.HistoryState)) {
+          if (!useHistory) useHistory = initialSubstate.get('isRecursive');
+          initialSubstate = initialSubstate.get('state');
+        }
         this._traverseStatesToEnter(initialSubstate, null, null, useHistory, gotoStateActions);  
       } 
       
