@@ -11,7 +11,7 @@ externalState2 = null;
 // CONTENT CHANGING
 // 
 
-module("Ki.Statechart Mixin: Basic Unit test", {
+module("Ki.Statechart: Plugin State Tests", {
   setup: function() {
     
     externalState1 = Ki.State.extend({
