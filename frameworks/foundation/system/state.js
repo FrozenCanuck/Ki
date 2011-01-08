@@ -632,7 +632,12 @@ Ki.State = SC.Object.extend({
   },
   
   toString: function() {
-    return "Ki.State<%@, %@>".fmt(this.get("name"), SC.guidFor(this));
+    if (!this._relativePath) {
+      var root = this.getPath('statechart.rootState');
+      if (!root) this._relativePath = this.get('name');
+      else this._relativePath = this.pathRelativeTo(root);
+    }
+    return "Ki.State<%@, %@>".fmt(this._relativePath, SC.guidFor(this));
   }
   
 });
