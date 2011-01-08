@@ -631,13 +631,26 @@ Ki.State = SC.Object.extend({
     return Ki.Async.perform(func, arg1, arg2);
   },
   
+  /**
+    Returns the path for this state relative to the statechart's
+    root state. 
+    
+    The path is a dot-notation string representing the path from
+    this state to the statechart's root state, but without including
+    the root state in the path. For instance, if the name of this
+    state if "foo" and the parent state's name is "bar" where bar's
+    parent state is the root state, then the full path is "bar.foo"
+  
+    @property {String}
+  */
+  fullPath: function() {
+    var root = this.getPath('statechart.rootState');
+    if (!root) return this.get('name');
+    return this.pathRelativeTo(root);
+  }.property('name', 'parentState').cacheable(),
+  
   toString: function() {
-    if (!this._relativePath) {
-      var root = this.getPath('statechart.rootState');
-      if (!root) this._relativePath = this.get('name');
-      else this._relativePath = this.pathRelativeTo(root);
-    }
-    return "Ki.State<%@, %@>".fmt(this._relativePath, SC.guidFor(this));
+    return "Ki.State<%@, %@>".fmt(this.get('fullPath'), SC.guidFor(this));
   }
   
 });
