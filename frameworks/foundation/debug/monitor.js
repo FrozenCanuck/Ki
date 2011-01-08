@@ -54,10 +54,10 @@ Ki.StatechartMonitor = SC.Object.extend({
     for (i = 0; i < len; i += 1) {
       item = this.sequence[i];
       if (item.exited) {
-        seq += "exited %@".fmt(item.exited.get('name'));
+        seq += "exited %@".fmt(item.exited.get('fullPath'));
       } 
       else if (item.entered) {
-        seq += "entered %@".fmt(item.entered.get('name'));
+        seq += "entered %@".fmt(item.entered.get('fullPath'));
       } 
       if (i < len - 1) seq += ", ";
     }
