@@ -370,9 +370,25 @@ Ki.State = SC.Object.extend({
     Note that if the value given is a string, it will be assumed to be a path to a state. The path
     will be relative to the statechart's root state; not relative to this state.
     
+    Method can be called in the following ways: 
+    
+    {{{
+    
+      // With one argument
+      gotoState(<state>)
+      
+      // With two arguments
+      gotoState(<state>, <hash>)
+    
+    }}}
+    
+    Where <state> is either a string or a Ki.State object and <hash> is a regular JS hash object.
+    
     @param state {Ki.State|String} the state to go to
+    @param context {Hash} Optional. context object that will be supplied to all states that are
+           exited and entered during the state transition process
   */
-  gotoState: function(state) {
+  gotoState: function(state, context) {
     var fromState = null;
     
     if (this.get('isCurrentState')) {
@@ -381,7 +397,7 @@ Ki.State = SC.Object.extend({
       fromState = this.get('currentSubstates')[0];
     }
     
-    this.get('statechart').gotoState(state, fromState);
+    this.get('statechart').gotoState(state, fromState, context);
   },
   
   /**
@@ -391,11 +407,30 @@ Ki.State = SC.Object.extend({
     Note that if the value given is a string, it will be assumed to be a path to a state. The path
     will be relative to the statechart's root state; not relative to this state.
     
+    Method can be called in the following ways:
+    
+    {{{
+    
+      // With one argument
+      gotoHistoryState(<state>)
+      
+      // With two arguments
+      gotoHistoryState(<state>, <boolean | hash>)
+      
+      // With three arguments
+      gotoHistoryState(<state>, <boolean>, <hash>)
+    
+    }}}
+    
+    Where <state> is either a string or a Ki.State object and <hash> is a regular JS hash object.
+    
     @param state {Ki.State|String} the state whose history state to go to
     @param recusive {Boolean} Optional. Indicates whether to follow history states recusively starting
-                              from the given state
+           from the given state
+    @param context {Hash} Optional. context object that will be supplied to all states that are exited
+           entered during the state transition process
   */
-  gotoHistoryState: function(state, recursive) {
+  gotoHistoryState: function(state, recursive, context) {
     var fromState = null;
     
     if (this.get('isCurrentState')) {
@@ -404,7 +439,7 @@ Ki.State = SC.Object.extend({
       fromState = this.get('currentSubstates')[0];
     }
     
-    this.get('statechart').gotoHistoryState(state, fromState, recursive);
+    this.get('statechart').gotoHistoryState(state, fromState, recursive, context);
   },
   
   /**
@@ -594,8 +629,13 @@ Ki.State = SC.Object.extend({
     the active state transition process. In order to resume the process, you must call
     this state's resumeGotoState method or the statechart's resumeGotoState. If no asynchronous 
     action is to be perform, then nothing needs to be returned.
+    
+    When the enterState method is called, an optional context value may be supplied if
+    one was provided to the gotoState method.
+    
+    @param context {Hash} Optional value if one was supplied to gotoState when invoked
   */
-  enterState: function() { },
+  enterState: function(context) { },
   
   /**
     Called whenever this state is to be exited during a state transition process. This is 
@@ -617,8 +657,13 @@ Ki.State = SC.Object.extend({
     the active state transition process. In order to resume the process, you must call
     this state's resumeGotoState method or the statechart's resumeGotoState. If no asynchronous 
     action is to be perform, then nothing needs to be returned.
+    
+    When the exitState method is called, an optional context value may be supplied if
+    one was provided to the gotoState method.
+    
+    @param context {Hash} Optional value if one was supplied to gotoState when invoked
   */
-  exitState: function() { },
+  exitState: function(context) { },
   
   /**
     Call when an asynchronous action need to be performed when either entering or exiting

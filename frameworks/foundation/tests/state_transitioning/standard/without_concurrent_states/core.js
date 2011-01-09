@@ -5,10 +5,6 @@
 
 var statechart = null;
 
-// ..........................................................
-// CONTENT CHANGING
-// 
-
 module("Ki.Statechart: No Concurrent States - Goto State Tests", {
   setup: function() {
 
