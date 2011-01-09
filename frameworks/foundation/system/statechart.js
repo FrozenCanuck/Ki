@@ -485,7 +485,7 @@ Ki.StatechartManager = {
     }
     
     var point = this._gotoStateSuspendedPoint;
-    this._executeGotoStateActions(point.gotoState, point.actions, point.marker);
+    this._executeGotoStateActions(point.gotoState, point.actions, point.marker, point.context);
   },
   
   /** @private */
@@ -918,7 +918,7 @@ Ki.StatechartManager = {
     }
     var pending = this._pendingStateTransitions.shift();
     if (!pending) return;
-    this.gotoState(pending.state, pending.fromCurrentState, pending.useHistory);
+    this.gotoState(pending.state, pending.fromCurrentState, pending.useHistory, pending.context);
   },
   
   /** @private
