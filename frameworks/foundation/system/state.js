@@ -44,9 +44,14 @@ Ki.State = SC.Object.extend({
     the state, the statechart will automatically change the property 
     to be a corresponding state object
     
-    The substate is only to be this state's immediate substates.
+    The substate is only to be this state's immediate substates. If
+    no initial substate is assigned then this states initial substate
+    will be an instance of an empty state (Ki.EmptyState).
     
-    @property {State}
+    Note that a statechart's root state must always have an explicity
+    initial substate value assigned else an error will be thrown.
+    
+    @property {String|State}
   */
   initialSubstate: null,
   
@@ -159,9 +164,6 @@ Ki.State = SC.Object.extend({
       SC.Logger.error('Unable to set initial substate %@ since it did not match any of state\'s %@ substates'.fmt(initialSubstate, this));
     }
     
-    this.set('substates', substates);
-    this.set('currentSubstates', []);
-    
     if (substates.length === 0) {
       if (!SC.none(initialSubstate)) {
         SC.Logger.warn('Unable to make %@ an initial substate since state %@ has no substates'.fmt(initialSubstate, this));
@@ -169,9 +171,12 @@ Ki.State = SC.Object.extend({
     } 
     else if (substates.length > 0) {
       if (SC.none(initialSubstate) && !substatesAreConcurrent) {
-        state = substates[0];
+        state = this.createEmptyState({ parentState: this, statechart: statechart });
         this.set('initialSubstate', state);
-        SC.Logger.warn('state %@ has no initial substate defined. Will default to using %@ as initial substate'.fmt(this, state));
+        substates.push(state);
+        this[state.get('name')] = state;
+        state.initState();
+        SC.Logger.warn('state %@ has no initial substate defined. Will default to using an empty state as initial substate'.fmt(this));
       } 
       else if (!SC.none(initialSubstate) && substatesAreConcurrent) {
         this.set('initialSubstate', null);
@@ -179,6 +184,8 @@ Ki.State = SC.Object.extend({
       }
     }
     
+    this.set('substates', substates);
+    this.set('currentSubstates', []);
     this.set('stateIsInitialized', YES);
   },
   
@@ -187,8 +194,7 @@ Ki.State = SC.Object.extend({
   */
   createSubstate: function(state, attrs) {
     if (!attrs) attrs = {};
-    state = state.create(attrs);
-    return state;
+    return state.create(attrs);
   },
   
   /**
@@ -196,8 +202,15 @@ Ki.State = SC.Object.extend({
   */
   createHistoryState: function(state, attrs) {
     if (!attrs) attrs = {};
-    state = state.create(attrs);
-    return state;
+    return state.create(attrs);
+  },
+  
+  /**
+    Create an empty state for this state's initial substate
+  */
+  createEmptyState: function(attrs) {
+    if (!attrs) attrs = {};
+    return Ki.EmptyState.create(attrs);
   },
   
   /** @private 
@@ -695,7 +708,8 @@ Ki.State = SC.Object.extend({
   }.property('name', 'parentState').cacheable(),
   
   toString: function() {
-    return "Ki.State<%@, %@>".fmt(this.get('fullPath'), SC.guidFor(this));
+    var className = SC._object_className(this.constructor);
+    return "%@<%@, %@>".fmt(className, this.get('fullPath'), SC.guidFor(this));
   }
   
 });
@@ -878,5 +892,24 @@ Ki.HistoryState = SC.Object.extend({
   parentHistoryStateDidChange: function() {
     this.notifyPropertyChange('state');
   }.observes('*parentState.historyState')
+  
+});
+
+/** 
+  The default name given to an empty state
+*/
+Ki.EMPTY_STATE_NAME = "__EMPTY_STATE__";
+
+/**
+  Represents an empty state that gets assigned as a state's initial substate 
+  if the state does not have an initial substate defined.
+*/
+Ki.EmptyState = Ki.State.extend({
+  
+  name: Ki.EMPTY_STATE_NAME,
+  
+  enterState: function() {
+    SC.Logger.warn("No initial substate was defined for state %@. Entering default empty state".fmt(this.get('parentState')));
+  }
   
 });

@@ -64,7 +64,11 @@ module("Ki.Statechart: No Concurrent States - Goto State Asynchronous Tests", {
         
         c: Ki.State.design(StateMixin, {
           
+          initialSubstate: 'd',
+          
           d: Ki.State.design(StateMixin, {
+            
+            initialSubstate: 'e',
             
             e: Ki.State.design(StateMixin)
             

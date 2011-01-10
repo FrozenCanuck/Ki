@@ -227,7 +227,8 @@ Ki.StatechartManager = {
     }
     
     var trace = this.get('trace'),
-        rootState = this.get('rootState');
+        rootState = this.get('rootState'),
+        msg;
     
     if (trace) SC.Logger.info('BEGIN initialize statechart');
     
@@ -236,12 +237,21 @@ Ki.StatechartManager = {
     }
     
     if (!(SC.kindOf(rootState, Ki.State) && rootState.isClass)) {
-      throw "Unable to initialize statechart. Root state must be a state class";
+      msg = 'Unable to initialize statechart. Root state must be a state class';
+      SC.Logger.error(msg);
+      throw msg;
     }
     
     rootState = this.createRootState(rootState, { statechart: this, name: Ki.ROOT_STATE_NAME });
     this.set('rootState', rootState);
     rootState.initState();
+    
+    if (SC.kindOf(rootState.get('initialSubstate'), Ki.EmptyState)) {
+      msg = 'Unable to initialize statechart. Root state must have an initial substate explicilty defined';
+      SC.Logger.error(msg);
+      throw msg;
+    }
+    
     this.set('statechartIsInitialized', YES);
     this.gotoState(rootState);
     
