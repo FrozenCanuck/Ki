@@ -5,10 +5,6 @@
 
 var statechart, root, monitor, stateA, stateB, stateC, stateD, stateE, stateF;
 
-// ..........................................................
-// CONTENT CHANGING
-// 
-
 module("Ki.Statechart: State Initial Substate Tests", {
   setup: function() {
 

@@ -5,10 +5,6 @@
 
 var statechart = null;
 
-// ..........................................................
-// CONTENT CHANGING
-// 
-
 module("Ki.Statechart: State - isCurrentState Property Tests", {
   setup: function() {
 

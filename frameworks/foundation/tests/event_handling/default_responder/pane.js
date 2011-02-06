@@ -10,7 +10,7 @@ var pane, button, fooInvokedCount;
 // CONTENT CHANGING
 // 
 
-module("Ki.Statechart: No Concurrent States - Default Responder Tests", {
+module("Ki.Statechart: No Concurrent States - Pane Default Responder Tests", {
   setup: function() {
     fooInvokedCount = 0;
     

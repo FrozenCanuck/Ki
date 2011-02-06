@@ -556,22 +556,22 @@ Ki.State = SC.Object.extend({
       Ki.State.extend({
       
         // Basic function handling event 'foo'
-        foo: function(sender, context) { ... },
+        foo: function(arg1, arg2) { ... },
         
         // event handler that handles 'frozen' and 'canuck'
-        eventHandlerA: function(event, sender, context) {
+        eventHandlerA: function(event, arg1, arg2) {
           ...
         }.handleEvent('frozen', 'canuck'),
         
         // event handler that handles events matching the regular expression /num\d/
         //   ex. num1, num2
-        eventHandlerB: function(event, sender, context) {
+        eventHandlerB: function(event, arg1, arg2) {
           ...
         }.handleEvent(/num\d/),
         
         // Handle any event that was not handled by some other
         // method on the state
-        unknownEvent: function(event, sender, context) {
+        unknownEvent: function(event, arg1, arg2) {
         
         }
       
@@ -579,7 +579,7 @@ Ki.State = SC.Object.extend({
     
     }}}
   */
-  tryToHandleEvent: function(event, sender, context) {
+  tryToHandleEvent: function(event, arg1, arg2) {
         
     // First check if the name of the event is the same as a registered event handler. If so,
     // then do not handle the event.
@@ -589,13 +589,14 @@ Ki.State = SC.Object.extend({
     }    
     
     // Now begin by trying a basic method on the state to respond to the event
-    if (this.tryToPerform(event, sender, context)) return YES;
+    if (SC.typeOf(this[event]) === SC.T_FUNCTION) {
+      return (this[event](arg1, arg2) !== NO);
+    }
     
     // Try an event handler that is associated with an event represented as a string
     var handler = this._registeredStringEventHandlers[event];
     if (handler) {
-      handler.handler.call(this, event, sender, context);
-      return YES;
+      return (handler.handler.call(this, event, arg1, arg2) !== NO);
     }
     
     // Try an event handler that is associated with events matching a regular expression
@@ -606,16 +607,14 @@ Ki.State = SC.Object.extend({
     for (; i < len; i += 1) {
       handler = this._registeredRegExpEventHandlers[i];
       if (event.match(handler.regexp)) {
-        handler.handler.call(this, event, sender, context);
-        return YES;
+        return (handler.handler.call(this, event, arg1, arg2) !== NO);
       }
     }
     
     // Final attempt. If the state has an unknownEvent function then invoke it to 
     // handle the event
     if (SC.typeOf(this['unknownEvent']) === SC.T_FUNCTION) {
-      this.unknownEvent(event, sender, context);
-      return YES;
+      return (this.unknownEvent(event, arg1, arg2) !== NO);
     }
     
     // Nothing was able to handle the given event for this state
@@ -687,6 +686,31 @@ Ki.State = SC.Object.extend({
   */
   performAsync: function(func, arg1, arg2) {
     return Ki.Async.perform(func, arg1, arg2);
+  },
+  
+  /** @override
+  
+    Returns YES if this state can respond to the given event, otherwise
+    NO is returned
+  
+    @param event {String} the value to check
+    @returns {Boolean}
+  */
+  respondsToEvent: function(event) {
+    if (this._registeredEventHandlers[event]) return false;
+    if (SC.typeOf(this[event]) === SC.T_FUNCTION) return true;
+    if (this._registeredStringEventHandlers[event]) return true;
+    
+    var len = this._registeredRegExpEventHandlers.length,
+        i = 0,
+        handler;
+        
+    for (; i < len; i += 1) {
+      handler = this._registeredRegExpEventHandlers[i];
+      if (event.match(handler.regexp)) return true;
+    }
+    
+    return SC.typeOf(this['unknownEvent']) === SC.T_FUNCTION;
   },
   
   /**

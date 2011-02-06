@@ -7,10 +7,6 @@ var statechart = null;
 externalState1 = null;
 externalState2 = null;
 
-// ..........................................................
-// CONTENT CHANGING
-// 
-
 module("Ki.Statechart: Plugin State Tests", {
   setup: function() {
     

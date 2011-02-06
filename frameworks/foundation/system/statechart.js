@@ -706,16 +706,17 @@ Ki.StatechartManager = {
     will be tried. This process is recursively done until no more parent state can be tried.
     
     @param event {String} name of the event
-    @param sender {Object} Optional. object sending the event
-    @param context {Object} Optional. additional information to pass along
+    @param arg1 {Object} optional argument
+    @param arg2 {Object} optional argument
     @returns {SC.Responder} the responder that handled it or null
   */
-  sendEvent: function(event, sender, context) {
-    var eventHandled = NO,
+  sendEvent: function(event, arg1, arg2) {
+    var statechartHandledEvent = NO,
+        eventHandled = NO,
         currentStates = this.get('currentStates').slice(),
         len = 0,
         i = 0,
-        responder = null;
+        state = null;
     
     if (this._sendEventLocked || this._goStateLocked) {
       // Want to prevent any actions from being processed by the states until 
@@ -723,8 +724,8 @@ Ki.StatechartManager = {
       // a state transition
       this._pendingSentEvents.push({
         event: event,
-        sender: sender,
-        context: context
+        arg1: arg1,
+        arg2: arg2
       });
 
       return;
@@ -735,24 +736,23 @@ Ki.StatechartManager = {
     len = currentStates.get('length');
     for (; i < len; i += 1) {
       eventHandled = NO;
-      responder = currentStates[i];
-      if (!responder.get('isCurrentState')) continue;
-      while (!eventHandled && responder) {
-        if (responder.tryToPerform) {
-          try {
-            eventHandled = responder.tryToHandleEvent(event, sender, context);
-          } catch (ex) { /** Gobal the exception and move on */ }
-        }
-        if (!eventHandled) responder = responder.get('parentState');
+      state = currentStates[i];
+      if (!state.get('isCurrentState')) continue;
+      while (!eventHandled && state) {
+        try {
+          eventHandled = state.tryToHandleEvent(event, arg1, arg2);
+        } catch (ex) { /** Gobal the exception and move on */ }
+        if (!eventHandled) state = state.get('parentState');
+        else statechartHandledEvent = YES;
       }
     }
     
     // Now that all the states have had a chance to process the 
     // first event, we can go ahead and flush any pending sent events.
     this._sendEventLocked = NO;
-    this._flushPendingSentEvents();
+    var result = this._flushPendingSentEvents();
     
-    return responder ;
+    return statechartHandledEvent ? this : (result ? this : null);
   },
 
   /** @private
@@ -901,6 +901,49 @@ Ki.StatechartManager = {
     }
   },
   
+  /** @override
+  
+    Returns YES if the named value translates into an executable function on
+    any of the statechart's current states or the statechart itself.
+    
+    @param event {String} the property name to check
+    @returns {Boolean}
+  */
+  respondsTo: function(event) {
+    var currentStates = this.get('currentStates'),
+        len = currentStates.get('length'), 
+        i = 0, state = null;
+        
+    for (; i < len; i += 1) {
+      state = currentStates.objectAt(i);
+      while (state) {
+        if (state.respondsToEvent(event)) return true;
+        state = state.get('parentState');
+      }
+    }
+    
+    // None of the current states can respond. Now check the statechart itself
+    return SC.typeOf(this[event]) === SC.T_FUNCTION;   
+  },
+  
+  /** @override
+  
+    Attemps to handle a given event against any of the statechart's current states and the
+    statechart itself. If any current state can handle the event or the statechart itself can
+    handle the event then YES is returned, otherwise NO is returned.
+  
+    @param event {String} what to perform
+    @param arg1 {Object} Optional
+    @param arg2 {Object} Optional
+    @returns {Boolean} YES if handled, NO if not handled
+  */
+  tryToPerform: function(event, arg1, arg2) {
+    if (this.respondsTo(event)) {
+      if (SC.typeOf(this[event]) === SC.T_FUNCTION) return (this[event](arg1, arg2) !== NO);
+      else return !!this.sendEvent(event, arg1, arg2);
+    } return NO;
+  },
+  
   /** @private
   
     Iterate over all the given concurrent states and enter them
@@ -938,8 +981,8 @@ Ki.StatechartManager = {
    */
   _flushPendingSentEvents: function() {
     var pending = this._pendingSentEvents.shift();
-    if (!pending) return;
-    this.sendEvent(pending.event, pending.sender, pending.context);
+    if (!pending) return null;
+    return this.sendEvent(pending.event, pending.arg1, pending.arg2);
   },
   
   _monitorIsActiveDidChange: function() {
