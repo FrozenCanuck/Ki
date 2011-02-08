@@ -580,7 +580,9 @@ Ki.State = SC.Object.extend({
     }}}
   */
   tryToHandleEvent: function(event, arg1, arg2) {
-        
+
+    var trace = this.get('trace');
+
     // First check if the name of the event is the same as a registered event handler. If so,
     // then do not handle the event.
     if (this._registeredEventHandlers[event]) {
@@ -590,12 +592,14 @@ Ki.State = SC.Object.extend({
     
     // Now begin by trying a basic method on the state to respond to the event
     if (SC.typeOf(this[event]) === SC.T_FUNCTION) {
+      if (trace) SC.Logger.info('%@: will handle event %@'.fmt(this, event));
       return (this[event](arg1, arg2) !== NO);
     }
     
     // Try an event handler that is associated with an event represented as a string
     var handler = this._registeredStringEventHandlers[event];
     if (handler) {
+      if (trace) SC.Logger.info('%@: %@ will handle event %@'.fmt(this, handler.name, event));
       return (handler.handler.call(this, event, arg1, arg2) !== NO);
     }
     
@@ -607,6 +611,7 @@ Ki.State = SC.Object.extend({
     for (; i < len; i += 1) {
       handler = this._registeredRegExpEventHandlers[i];
       if (event.match(handler.regexp)) {
+        if (trace) SC.Logger.info('%@: %@ will handle event %@'.fmt(this, handler.name, event));
         return (handler.handler.call(this, event, arg1, arg2) !== NO);
       }
     }
@@ -614,6 +619,7 @@ Ki.State = SC.Object.extend({
     // Final attempt. If the state has an unknownEvent function then invoke it to 
     // handle the event
     if (SC.typeOf(this['unknownEvent']) === SC.T_FUNCTION) {
+      if (trace) if (trace) SC.Logger.info('%@: unknownEvent will handle event %@'.fmt(this, event));
       return (this.unknownEvent(event, arg1, arg2) !== NO);
     }
     
@@ -734,7 +740,17 @@ Ki.State = SC.Object.extend({
   toString: function() {
     var className = SC._object_className(this.constructor);
     return "%@<%@, %@>".fmt(className, this.get('fullPath'), SC.guidFor(this));
-  }
+  },
+  
+  /** @property */
+  trace: function() {
+    return this.getPath('statechart.trace');
+  }.property().cacheable(),
+  
+  /** @private */
+  statechartTraceDidChange: function() {
+    this.notifyPropertyChange('trace');
+  }.observes('statechart.trace')
   
 });
 

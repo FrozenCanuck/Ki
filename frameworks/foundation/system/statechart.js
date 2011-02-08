@@ -716,7 +716,8 @@ Ki.StatechartManager = {
         currentStates = this.get('currentStates').slice(),
         len = 0,
         i = 0,
-        state = null;
+        state = null,
+        trace = this.get('trace');
     
     if (this._sendEventLocked || this._goStateLocked) {
       // Want to prevent any actions from being processed by the states until 
@@ -732,6 +733,10 @@ Ki.StatechartManager = {
     }
     
     this._sendEventLocked = YES;
+    
+    if (trace) {
+      SC.Logger.info('BEGIN sendEvent: event<%@>'.fmt(event));
+    }
     
     len = currentStates.get('length');
     for (; i < len; i += 1) {
@@ -750,6 +755,12 @@ Ki.StatechartManager = {
     // Now that all the states have had a chance to process the 
     // first event, we can go ahead and flush any pending sent events.
     this._sendEventLocked = NO;
+    
+    if (trace) {
+      if (!statechartHandledEvent) SC.Logger.info('No state was able handle event %@'.fmt(event));
+      SC.Logger.info('END sendEvent: event<%@>'.fmt(event));
+    }
+    
     var result = this._flushPendingSentEvents();
     
     return statechartHandledEvent ? this : (result ? this : null);
