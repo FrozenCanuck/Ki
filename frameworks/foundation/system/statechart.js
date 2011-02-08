@@ -744,9 +744,7 @@ Ki.StatechartManager = {
       state = currentStates[i];
       if (!state.get('isCurrentState')) continue;
       while (!eventHandled && state) {
-        try {
-          eventHandled = state.tryToHandleEvent(event, arg1, arg2);
-        } catch (ex) { /** Gobal the exception and move on */ }
+        eventHandled = state.tryToHandleEvent(event, arg1, arg2);
         if (!eventHandled) state = state.get('parentState');
         else statechartHandledEvent = YES;
       }
