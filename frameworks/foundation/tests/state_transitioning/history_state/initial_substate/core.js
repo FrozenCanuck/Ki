@@ -7,7 +7,7 @@ var statechart, stateA, stateB, stateC;
 
 module("Ki.HistoryState Tests", {
   setup: function() {
-    statechart = Ki.Statechart.create();
+    statechart = Ki.Statechart.create({initialState: 'a', a: Ki.State.design()});
     stateA = Ki.State.create({ name: 'stateA' });
     stateB = Ki.State.create({ name: 'stateB' });
     stateC = Ki.State.create({ name: 'stateC' });

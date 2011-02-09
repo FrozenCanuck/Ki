@@ -92,10 +92,47 @@ Ki.State = SC.Object.extend({
   */
   currentSubstates: null,
   
+  /** 
+    Indicates if this state should trace actions. Useful for debugging
+    purposes. Managed by the statechart.
+  
+    @see Ki.StatechartManager#trace
+  
+    @property {Boolean}
+  */
+  trace: function() {
+    return this.getPath('statechart.trace');
+  }.property().cacheable(),
+  
+  /** 
+    Indicates who the owner is of this state. If not set on the statechart
+    then the owner is the statechart, otherwise it is the assigned
+    object. Managed by the statechart.
+    
+    @see Ki.StatechartManager#owner
+  
+    @property {SC.Object}
+  */
+  owner: function() {
+    var sc = this.get('statechart'),
+        owner = sc.get('owner');
+    return owner ? owner : sc;
+  }.property().cacheable(),
+  
   init: function() {
+    sc_super();
+    
     this._registeredEventHandlers = {};
     this._registeredStringEventHandlers = {};
     this._registeredRegExpEventHandlers = [];
+    
+    // Setting up observes this way is faster then using .observes,
+    // which adds a noticable increase in initialization time.
+    var sc = this.get('statechart');
+    if (sc) {
+      sc.addObserver('owner', this, '_statechartOwnerDidChange');
+      sc.addObserver('trace', this, '_statechartTraceDidChange');
+    }
   },
   
   /**
@@ -193,7 +230,6 @@ Ki.State = SC.Object.extend({
     creates a substate for this state
   */
   createSubstate: function(state, attrs) {
-    if (!attrs) attrs = {};
     return state.create(attrs);
   },
   
@@ -201,7 +237,6 @@ Ki.State = SC.Object.extend({
     Create a history state for this state
   */
   createHistoryState: function(state, attrs) {
-    if (!attrs) attrs = {};
     return state.create(attrs);
   },
   
@@ -209,7 +244,6 @@ Ki.State = SC.Object.extend({
     Create an empty state for this state's initial substate
   */
   createEmptyState: function(attrs) {
-    if (!attrs) attrs = {};
     return Ki.EmptyState.create(attrs);
   },
   
@@ -742,15 +776,15 @@ Ki.State = SC.Object.extend({
     return "%@<%@, %@>".fmt(className, this.get('fullPath'), SC.guidFor(this));
   },
   
-  /** @property */
-  trace: function() {
-    return this.getPath('statechart.trace');
-  }.property().cacheable(),
+  /** @private */
+  _statechartTraceDidChange: function() {
+    this.notifyPropertyChange('trace');
+  },
   
   /** @private */
-  statechartTraceDidChange: function() {
-    this.notifyPropertyChange('trace');
-  }.observes('statechart.trace')
+  _statechartOwnerDidChange: function() {
+    this.notifyPropertyChange('owner');
+  }
   
 });
 

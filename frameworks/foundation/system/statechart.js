@@ -5,6 +5,8 @@
 
 /*globals Ki */
 
+sc_require('system/state');
+
 /**
   The startchart manager mixin allows an object to be a statechart. By becoming a statechart, the
   object can then be manage a set of its own states.
@@ -45,6 +47,32 @@
   Note how in the example above, the root state as an explicit initial substate to enter into. If no
   initial substate is provided, then the statechart will default to the the state's first substate.
   
+  You can also defined states without explicitly defining the root state. To do so, simply create properties
+  on your object that represents states. Upon initialization, a root state will be constructed automatically
+  by the mixin and make the states on the object substates of the root state. As an example:
+  
+    {{{
+  
+      MyApp.Statechart = SC.Object.extend(Ki.StatechartManager, {
+    
+        initialState: 'stateA',
+      
+        stateA: Ki.State.design({
+          // ... can continue to nest further states
+        }),
+      
+        stateB: Ki.State.design({
+          // ... can continue to nest further states
+        })
+    
+      })
+  
+    }}} 
+  
+  If you liked to specify a class that should be used as the root state but using the above method to defined
+  states, you can set the rootStateExample property with a class that extends from Ki.State. If the 
+  rootStateExaple property is not explicitly assigned the then default class used will be Ki.State.
+  
   To provide your statechart with orthogonality, you use concurrent states. If you use concurrent states,
   then your statechart will have multiple current states. That is because each concurrent state represents an
   independent state structure from other concurrent states. The following example shows how to provide your
@@ -74,6 +102,27 @@
   Above, to indicate that a state's substates are concurrent, you just have to set the substatesAreConcurrent to 
   YES. Once done, then stateA and stateB will be independent of each other and each will manage their
   own current substates. The root state will then have more then one current substate.
+  
+  To define concurrent states directly on the object without explicitly defining a root, you can do the 
+  following:
+  
+    {{{
+
+      MyApp.Statechart = SC.Object.extend(Ki.StatechartManager, {
+  
+        statesAreConcurrent: YES,
+    
+        stateA: Ki.State.design({
+          // ... can continue to nest further states
+        }),
+    
+        stateB: Ki.State.design({
+          // ... can continue to nest further states
+        })
+  
+      })
+
+    }}}
   
   Remember that a startchart can have a mixture of nested and concurrent states in order for you to 
   create as complex of statecharts that suite your needs. Here is an example of a mixed state structure:
@@ -181,9 +230,55 @@ Ki.StatechartManager = {
   /**
     The root state of this statechart. All statecharts must have a root state.
     
+    If this property is left unassigned then when the statechart is initialized
+    it will used the rootStateExample, initialState, and statesAreConcurrent
+    properties to construct a root state.
+    
+    @see #rootStateExample
+    @see #initialState
+    @see #statesAreConcurrent
+    
     @property {Ki.State}
   */
   rootState: null,
+  
+  /** 
+    Represents the class used to construct a class that will be the root state for
+    this statechart. The class assigned must derive from Ki.State. 
+    
+    This property will only be used if the rootState property is not assigned.
+  
+    @see #rootState
+  
+    @property {Ki.State}
+  */
+  rootStateExample: Ki.State,
+  
+  /** 
+    Indicates what state should be the intiail state of this statechart. The value
+    assigned must be the name of a property on this object that represents a state.
+    As well, the statesAreConcurrent must be set to NO.
+    
+    This property will only be used if the rootState property is not assigned.
+  
+    @see #rootState
+  
+    @property {String} 
+  */
+  initialState: null,
+  
+  /** 
+    Indicates if properties on this object representing states are concurrent to each other.
+    If YES then they are concurrent, otherwise they are not. If the YES, then the
+    initialState property must not be assigned.
+    
+    This property will only be used if the rootState property is not assigned.
+  
+    @see #rootState
+  
+    @property {Boolean}
+  */
+  statesAreConcurrent: NO,
   
   /** 
     Indicates whether to use a monitor to monitor that statechart's activities. If true then
@@ -198,15 +293,40 @@ Ki.StatechartManager = {
     A statechart monitor that can be used to monitor this statechart. Useful for debugging purposes.
     A monitor will only be used if monitorIsActive is true.
     
-    @property {StatechartMonitor}
+    @property {Ki.StatechartMonitor}
   */
   monitor: null,
   
   /**
     Indicates whether to trace the statecharts activities. If true then the statechart will output
     its activites to the browser's JS console. Useful for debugging purposes.
+    
+    @property {Boolean}
   */
   trace: NO,
+  
+  /**
+    Sets who the owner is of this statechart. If null then the owner is this object otherwise
+    the owner is the assigned object. 
+  
+    @property {SC.Object}
+  */
+  owner: null,
+  
+  /** 
+    Indicates if the statechart should be automatically initialized by this
+    object after it has been created. If YES then initStatechart will be
+    called automatically, otherwise it will not.
+  
+    @property {Boolean}
+  */
+  autoInitStatechart: YES,
+  
+  initMixin: function() {
+    if (this.get('autoInitStatechart')) {
+      this.initStatechart();
+    }
+  },
   
   /**
     Initializes the statechart. By initializing the statechart, it will create all the states and register
@@ -228,11 +348,17 @@ Ki.StatechartManager = {
     
     var trace = this.get('trace'),
         rootState = this.get('rootState'),
+        owner = this.get('owner'),
         msg;
     
     if (trace) SC.Logger.info('BEGIN initialize statechart');
     
-    if (SC.typeOf(rootState) === SC.T_FUNCTION && rootState.statePlugin) {
+    // If no root state was explicitly defined then try to construct
+    // a root state class
+    if (!rootState) {
+      rootState = this._constructRootStateClass();
+    }
+    else if (SC.typeOf(rootState) === SC.T_FUNCTION && rootState.statePlugin) {
       rootState = rootState.apply(this);
     }
     
@@ -242,7 +368,11 @@ Ki.StatechartManager = {
       throw msg;
     }
     
-    rootState = this.createRootState(rootState, { statechart: this, name: Ki.ROOT_STATE_NAME });
+    rootState = this.createRootState(rootState, { 
+      statechart: this, 
+      name: Ki.ROOT_STATE_NAME 
+    });
+    
     this.set('rootState', rootState);
     rootState.initState();
     
@@ -251,6 +381,11 @@ Ki.StatechartManager = {
       SC.Logger.error(msg);
       throw msg;
     }
+    
+    if (!SC.empty(this.get('initialState'))) {
+      var key = 'initialState';
+      this.set(key, rootState.get(this.get(key)));
+    } 
     
     this.set('statechartIsInitialized', YES);
     this.gotoState(rootState);
@@ -274,7 +409,7 @@ Ki.StatechartManager = {
   */
   currentStates: function() {
     return this.getPath('rootState.currentSubstates');
-  }.property(),
+  }.property().cacheable(),
   
   /**
     Returns the count of the current states for this statechart
@@ -283,7 +418,7 @@ Ki.StatechartManager = {
   */
   currentStateCount: function() {
     return this.getPath('currentStates.length');
-  }.property('currentStates'),
+  }.property('currentStates').cacheable(),
   
   /**
     Checks if a given state is a current state of this statechart. 
@@ -994,6 +1129,7 @@ Ki.StatechartManager = {
     return this.sendEvent(pending.event, pending.arg1, pending.arg2);
   },
   
+  /** @private */
   _monitorIsActiveDidChange: function() {
     if (this.get('monitorIsActive') && SC.none(this.get('monitor'))) {
       this.set('monitor', Ki.StatechartMonitor.create());
@@ -1061,6 +1197,70 @@ Ki.StatechartManager = {
     }
     
     return processedArgs;
+  },
+  
+  /** @private 
+  
+    Will return a newly constructed root state class. The root state will have substates added to
+    it based on properties found on this state that derive from a Ki.State class. For the
+    root state to be successfully built, the following much be met:
+    
+      - The rootStateExample property must be defined with a class that derives from Ki.State
+      - Either the initialState or statesAreConcurrent property must be set, but not both
+      - There must be one or more states that can be added to the root state
+      
+  */
+  _constructRootStateClass: function() {
+    var rsExampleKey = 'rootStateExample',
+        rsExample = this.get(rsExampleKey),
+        initialState = this.get('initialState'),
+        statesAreConcurrent = this.get('statesAreConcurrent'),
+        stateCount = 0,
+        key, value, valueIsFunc, attrs = {};
+    
+    if (!(SC.kindOf(rsExample, Ki.State) && rsExample.isClass)) {
+      this._logStatechartCreationError("Invalid root state example");
+      return null;
+    }
+    
+    if (statesAreConcurrent && !SC.empty(initialState)) {
+      this._logStatechartCreationError("Can not assign an initial state when states are concurrent");
+    } else if (statesAreConcurrent) {
+      attrs.substatesAreConcurrent = YES;
+    } else if (SC.typeOf(initialState) === SC.T_STRING) {
+      attrs.initialSubstate = initialState;
+    } else {
+      this._logStatechartCreationError("Must either define initial state or assign states as concurrent");
+      return null;
+    }
+    
+    for (key in this) {
+      if (key === rsExampleKey) continue;
+      
+      value = this[key];
+      valueIsFunc = SC.typeOf(value) === SC.T_FUNCTION;
+      
+      if (valueIsFunc && value.statePlugin) {
+        value = value.apply(this);
+      }
+      
+      if (SC.kindOf(value, Ki.State) && value.isClass && this[key] !== this.constructor) {
+        attrs[key] = value;
+        stateCount += 1;
+      }
+    }
+    
+    if (stateCount === 0) {
+      this._logStatechartCreationError("Must define one or more states");
+      return null;
+    }
+    
+    return rsExample.extend(attrs);
+  },
+  
+  /** @private */
+  _logStatechartCreationError: function(msg) {
+    SC.Logger.error("Unable to create statechart for %@: %@.".fmt(this, msg));
   }
   
 };
@@ -1079,7 +1279,11 @@ Ki.ENTER_STATE = 1;
 /**
   A Startchart class. 
 */
-Ki.Statechart = SC.Object.extend(Ki.StatechartManager);
+Ki.Statechart = SC.Object.extend(Ki.StatechartManager, {
+  autoInitStatechart: NO
+});
+
+Ki.Statechart.design = Ki.Statechart.extend;
 
 /**
   Represents a call that is intended to be asynchronous. This is
