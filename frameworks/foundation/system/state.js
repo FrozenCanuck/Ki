@@ -161,7 +161,7 @@ Ki.State = SC.Object.extend({
       this.set('initialSubstate', historyState);
       
       if (SC.none(historyState.get('defaultState'))) {
-        SC.Logger.error('Initial substate is invalid. History state requires the name of a default state to be set');
+        this.stateLogError("Initial substate is invalid. History state requires the name of a default state to be set");
         this.set('initialSubstate', null);
         historyState = null;
       }
@@ -198,12 +198,12 @@ Ki.State = SC.Object.extend({
     }
     
     if (!SC.none(initialSubstate) && !matchedInitialSubstate) {
-      SC.Logger.error('Unable to set initial substate %@ since it did not match any of state\'s %@ substates'.fmt(initialSubstate, this));
+      this.stateLogError("Unable to set initial substate %@ since it did not match any of state's %@ substates".fmt(initialSubstate, this));
     }
     
     if (substates.length === 0) {
       if (!SC.none(initialSubstate)) {
-        SC.Logger.warn('Unable to make %@ an initial substate since state %@ has no substates'.fmt(initialSubstate, this));
+        this.stateLogWarning("Unable to make %@ an initial substate since state %@ has no substates".fmt(initialSubstate, this));
       }
     } 
     else if (substates.length > 0) {
@@ -213,11 +213,11 @@ Ki.State = SC.Object.extend({
         substates.push(state);
         this[state.get('name')] = state;
         state.initState();
-        SC.Logger.warn('state %@ has no initial substate defined. Will default to using an empty state as initial substate'.fmt(this));
+        this.stateLogWarning("state %@ has no initial substate defined. Will default to using an empty state as initial substate".fmt(this));
       } 
       else if (!SC.none(initialSubstate) && substatesAreConcurrent) {
         this.set('initialSubstate', null);
-        SC.Logger.warn('Can not use %@ as initial substate since substates are all concurrent for state %@'.fmt(initialSubstate, this));
+        this.stateLogWarning("Can not use %@ as initial substate since substates are all concurrent for state %@".fmt(initialSubstate, this));
       }
     }
     
@@ -282,7 +282,7 @@ Ki.State = SC.Object.extend({
         continue;
       }
       
-      SC.Logger.error("Invalid event %@ for event handler %@ in state %@".fmt(event, name, this));
+      this.stateLogError("Invalid event %@ for event handler %@ in state %@".fmt(event, name, this));
     }
   },
   
@@ -345,7 +345,7 @@ Ki.State = SC.Object.extend({
     }
     
     if (parent !== state && state !== this) {
-      SC.Logger.error('Can not generate relative path from %@ since it not a parent state of %@'.fmt(state, this));
+      this.stateLogError('Can not generate relative path from %@ since it not a parent state of %@'.fmt(state, this));
       return null;
     }
     
@@ -376,7 +376,7 @@ Ki.State = SC.Object.extend({
     }
     
     if (valueType !== SC.T_STRING) {
-      SC.Logger.error("Can not find matching subtype. value must be an object or string: %@".fmt(value));
+      this.stateLogError("Can not find matching subtype. value must be an object or string: %@".fmt(value));
       return null;
     }
     
@@ -403,7 +403,7 @@ Ki.State = SC.Object.extend({
       if (paths.__ki_paths__.length === 1) return paths[paths.__ki_paths__[0]];
       if (paths.__ki_paths__.length > 1) {
         var msg = 'Can not find substate matching %@ in state %@. Ambiguous with the following: %@';
-        SC.Logger.error(msg.fmt(value, this, paths.__ki_paths__));
+        this.stateLogError(msg.fmt(value, this, paths.__ki_paths__));
       }
     } 
     
@@ -620,20 +620,20 @@ Ki.State = SC.Object.extend({
     // First check if the name of the event is the same as a registered event handler. If so,
     // then do not handle the event.
     if (this._registeredEventHandlers[event]) {
-      SC.Logger.warn("state %@ can not handle event %@ since it is a registered event handler".fmt(this, event));
+      this.stateLogWarning("state %@ can not handle event %@ since it is a registered event handler".fmt(this, event));
       return NO;
     }    
     
     // Now begin by trying a basic method on the state to respond to the event
     if (SC.typeOf(this[event]) === SC.T_FUNCTION) {
-      if (trace) SC.Logger.info('%@: will handle event %@'.fmt(this, event));
+      if (trace) this.stateLogTrace("will handle event %@".fmt(event));
       return (this[event](arg1, arg2) !== NO);
     }
     
     // Try an event handler that is associated with an event represented as a string
     var handler = this._registeredStringEventHandlers[event];
     if (handler) {
-      if (trace) SC.Logger.info('%@: %@ will handle event %@'.fmt(this, handler.name, event));
+      if (trace) this.stateLogTrace("%@ will handle event %@".fmt(handler.name, event));
       return (handler.handler.call(this, event, arg1, arg2) !== NO);
     }
     
@@ -645,7 +645,7 @@ Ki.State = SC.Object.extend({
     for (; i < len; i += 1) {
       handler = this._registeredRegExpEventHandlers[i];
       if (event.match(handler.regexp)) {
-        if (trace) SC.Logger.info('%@: %@ will handle event %@'.fmt(this, handler.name, event));
+        if (trace) this.stateLogTrace("%@ will handle event %@".fmt(handler.name, event));
         return (handler.handler.call(this, event, arg1, arg2) !== NO);
       }
     }
@@ -653,7 +653,7 @@ Ki.State = SC.Object.extend({
     // Final attempt. If the state has an unknownEvent function then invoke it to 
     // handle the event
     if (SC.typeOf(this['unknownEvent']) === SC.T_FUNCTION) {
-      if (trace) if (trace) SC.Logger.info('%@: unknownEvent will handle event %@'.fmt(this, event));
+      if (trace) this.stateLogTrace("unknownEvent will handle event %@".fmt(event));
       return (this.unknownEvent(event, arg1, arg2) !== NO);
     }
     
@@ -784,6 +784,30 @@ Ki.State = SC.Object.extend({
   /** @private */
   _statechartOwnerDidChange: function() {
     this.notifyPropertyChange('owner');
+  },
+  
+  /** 
+    Used to log a state trace message
+  */
+  stateLogTrace: function(msg) {
+    var sc = this.get('statechart');
+    sc.statechartLogTrace("%@: %@".fmt(this, msg));
+  },
+
+  /** 
+    Used to log a state warning message
+  */
+  stateLogWarning: function(msg) {
+    var sc = this.get('statechart');
+    sc.statechartLogWarning(msg);
+  },
+  
+  /** 
+    Used to log a state error message
+  */
+  stateLogError: function(msg) {
+    var sc = this.get('statechart');
+    sc.statechartLogError(msg);
   }
   
 });
@@ -983,7 +1007,7 @@ Ki.EmptyState = Ki.State.extend({
   name: Ki.EMPTY_STATE_NAME,
   
   enterState: function() {
-    SC.Logger.warn("No initial substate was defined for state %@. Entering default empty state".fmt(this.get('parentState')));
+    this.stateLogWarning("No initial substate was defined for state %@. Entering default empty state".fmt(this.get('parentState')));
   }
   
 });

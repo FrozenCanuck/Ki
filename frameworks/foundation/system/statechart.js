@@ -351,7 +351,7 @@ Ki.StatechartManager = {
         owner = this.get('owner'),
         msg;
     
-    if (trace) SC.Logger.info('BEGIN initialize statechart');
+    if (trace) this.statechartLogTrace("BEGIN initialize statechart");
     
     // If no root state was explicitly defined then try to construct
     // a root state class
@@ -363,8 +363,8 @@ Ki.StatechartManager = {
     }
     
     if (!(SC.kindOf(rootState, Ki.State) && rootState.isClass)) {
-      msg = 'Unable to initialize statechart. Root state must be a state class';
-      SC.Logger.error(msg);
+      msg = "Unable to initialize statechart. Root state must be a state class";
+      this.statechartLogError(msg);
       throw msg;
     }
     
@@ -377,8 +377,8 @@ Ki.StatechartManager = {
     rootState.initState();
     
     if (SC.kindOf(rootState.get('initialSubstate'), Ki.EmptyState)) {
-      msg = 'Unable to initialize statechart. Root state must have an initial substate explicilty defined';
-      SC.Logger.error(msg);
+      msg = "Unable to initialize statechart. Root state must have an initial substate explicilty defined";
+      this.statechartLogError(msg);
       throw msg;
     }
     
@@ -390,7 +390,7 @@ Ki.StatechartManager = {
     this.set('statechartIsInitialized', YES);
     this.gotoState(rootState);
     
-    if (trace) SC.Logger.info('END initialize statechart');
+    if (trace) this.statechartLogTrace("END initialize statechart");
   },
   
   /**
@@ -500,7 +500,7 @@ Ki.StatechartManager = {
   gotoState: function(state, fromCurrentState, useHistory, context) {
     
     if (!this.get('statechartIsInitialized')) {
-      SC.Logger.error('can not go to state %@. statechart has not yet been initialized'.fmt(state));
+      this.statechartLogError("can not go to state %@. statechart has not yet been initialized".fmt(state));
       return;
     }
     
@@ -522,7 +522,7 @@ Ki.StatechartManager = {
     state = rootState.getSubstate(state);
     
     if (SC.none(state)) {
-      SC.Logger.error('Can not to goto state %@. Not a recognized state in statechart'.fmt(paramState));
+      this.statechartLogError("Can not to goto state %@. Not a recognized state in statechart".fmt(paramState));
       return;
     }
     
@@ -548,8 +548,8 @@ Ki.StatechartManager = {
       // Check to make sure the current state given is actually a current state of this statechart
       fromCurrentState = rootState.getSubstate(fromCurrentState);
       if (SC.none(fromCurrentState) || !fromCurrentState.get('isCurrentState')) {
-        var msg = 'Can not to goto state %@. %@ is not a recognized current state in statechart';
-        SC.Logger.error(msg.fmt(paramState, paramFromCurrentState));
+        var msg = "Can not to goto state %@. %@ is not a recognized current state in statechart";
+        this.statechartLogError(msg.fmt(paramState, paramFromCurrentState));
         this._gotoStateLocked = NO;
         return;
       }
@@ -561,9 +561,9 @@ Ki.StatechartManager = {
     }
         
     if (trace) {
-      SC.Logger.info('BEGIN gotoState: %@'.fmt(state));
-      SC.Logger.info('starting from current state: %@'.fmt(fromCurrentState));
-      SC.Logger.info('current states before: %@'.fmt(this.get('currentStates')));
+      this.statechartLogTrace("BEGIN gotoState: %@".fmt(state));
+      this.statechartLogTrace("starting from current state: %@".fmt(fromCurrentState));
+      this.statechartLogTrace("current states before: %@".fmt(this.get('currentStates')));
     }
 
     // If there is a current state to start the transition process from, then determine what
@@ -579,9 +579,9 @@ Ki.StatechartManager = {
     pivotState = this._findPivotState(exitStates, enterStates);
 
     if (pivotState) {
-      if (trace) SC.Logger.info('pivot state = ' + pivotState);
+      if (trace) this.statechartLogTrace("pivot state = %@".fmt(pivotState));
       if (pivotState.get('substatesAreConcurrent')) {
-        SC.Logger.error('Can not go to state %@. Pivot state %@ has concurrent substates.'.fmt(state, pivotState));
+        this.statechartLogError("Can not go to state %@. Pivot state %@ has concurrent substates.".fmt(state, pivotState));
         this._gotoStateLocked = NO;
         return;
       }
@@ -625,7 +625,7 @@ Ki.StatechartManager = {
   */
   resumeGotoState: function() {
     if (!this.get('gotoStateSuspended')) {
-      SC.Logger.error('Can not resume goto state since it has not been suspended');
+      this.statechartLogError("Can not resume goto state since it has not been suspended");
       return;
     }
     
@@ -677,8 +677,8 @@ Ki.StatechartManager = {
     this.notifyPropertyChange('currentStates');
     
     if (this.get('trace')) {
-      SC.Logger.info('current states after: %@'.fmt(this.get('currentStates')));
-      SC.Logger.info('END gotoState: %@'.fmt(gotoState));
+      this.statechartLogTrace("current states after: %@".fmt(this.get('currentStates')));
+      this.statechartLogTrace("END gotoState: %@".fmt(gotoState));
     }
     
     // Okay. We're done with the current state transition. Make sure to unlock the
@@ -698,7 +698,7 @@ Ki.StatechartManager = {
       }
     }
       
-    if (this.get('trace')) SC.Logger.info('exiting state: ' + state);
+    if (this.get('trace')) this.statechartLogTrace("exiting state: %@".fmt(state));
     
     state.set('currentSubstates', []);
     state.notifyPropertyChange('isCurrentState');
@@ -737,7 +737,7 @@ Ki.StatechartManager = {
       }
     }
     
-    if (this.get('trace')) SC.Logger.info('entering state: ' + state);
+    if (this.get('trace')) this.statechartLogTrace("entering state: %@".fmt(state));
     
     state.notifyPropertyChange('isCurrentState');
     var result = this.enterState(state, context);
@@ -803,7 +803,7 @@ Ki.StatechartManager = {
   */
   gotoHistoryState: function(state, fromCurrentState, recursive, context) {
     if (!this.get('statechartIsInitialized')) {
-      SC.Logger.error("can not go to state %@'s history state. Statechart has not yet been initialized".fmt(state));
+      this.statechartLogError("can not go to state %@'s history state. Statechart has not yet been initialized".fmt(state));
       return;
     }
     
@@ -817,7 +817,7 @@ Ki.StatechartManager = {
     state = this.getState(state);
   
     if (!state) {
-      SC.Logger.error("Can not to goto state %@'s history state. Not a recognized state in statechart".fmt(state));
+      this.statechartLogError("Can not to goto state %@'s history state. Not a recognized state in statechart".fmt(state));
       return;
     }
     
@@ -870,7 +870,7 @@ Ki.StatechartManager = {
     this._sendEventLocked = YES;
     
     if (trace) {
-      SC.Logger.info('BEGIN sendEvent: event<%@>'.fmt(event));
+      this.statechartLogTrace("BEGIN sendEvent: event<%@>".fmt(event));
     }
     
     len = currentStates.get('length');
@@ -890,8 +890,8 @@ Ki.StatechartManager = {
     this._sendEventLocked = NO;
     
     if (trace) {
-      if (!statechartHandledEvent) SC.Logger.info('No state was able handle event %@'.fmt(event));
-      SC.Logger.info('END sendEvent: event<%@>'.fmt(event));
+      if (!statechartHandledEvent) this.statechartLogTrace("No state was able handle event %@".fmt(event));
+      this.statechartLogTrace("END sendEvent: event<%@>".fmt(event));
     }
     
     var result = this._flushPendingSentEvents();
@@ -1110,7 +1110,7 @@ Ki.StatechartManager = {
   */
   _flushPendingStateTransition: function() {
     if (!this._pendingStateTransitions) {
-      SC.Logger.error('Unable to flush pending state transition. _pendingStateTransitions is invalid');
+      this.statechartLogError("Unable to flush pending state transition. _pendingStateTransitions is invalid");
       return;
     }
     var pending = this._pendingStateTransitions.shift();
@@ -1261,7 +1261,39 @@ Ki.StatechartManager = {
   /** @private */
   _logStatechartCreationError: function(msg) {
     SC.Logger.error("Unable to create statechart for %@: %@.".fmt(this, msg));
-  }
+  },
+  
+  /** 
+    Used to log a statechart trace message
+  */
+  statechartLogTrace: function(msg) {    
+    SC.Logger.info("%@: %@".fmt(this.get('statechartLogPrefix'), msg));
+  },
+  
+  /**
+    Used to log a statechart error message
+  */
+  statechartLogError: function(msg) {
+    SC.Logger.error("ERROR %@: %@".fmt(this.get('statechartLogPrefix'), msg));
+  },
+  
+  /** 
+    Used to log a statechart warning message
+  */
+  statechartLogWarning: function(msg) {
+    SC.Logger.warn("WARN %@: %@".fmt(this.get('statechartLogPrefix'), msg));
+  },
+  
+  /** @property */
+  statechartLogPrefix: function() {
+    var className = SC._object_className(this.constructor),
+        name = this.get('name'), prefix;
+        
+    if (SC.empty(name)) prefix = "%@<%@>".fmt(className, SC.guidFor(this));
+    else prefix = "%@<%@, %@>".fmt(className, name, SC.guidFor(this));
+    
+    return prefix;
+  }.property().cacheable()
   
 };
 
