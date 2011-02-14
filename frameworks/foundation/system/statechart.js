@@ -1088,6 +1088,102 @@ Ki.StatechartManager = {
     } return NO;
   },
   
+  /**
+    Used to invoke a method on current states. If the method can not be executed
+    on a current state, then the state's parent states will be tried in order
+    of closest ancestry.
+    
+    A few notes: 
+    
+      1) Calling this is not the same as calling sendEvent or sendAction.
+         Rather, this should be seen as calling normal methods on a state that 
+         will *not* call gotoState or gotoHistoryState. 
+      
+      2) A state will only ever be invoked once per call. So if there are two 
+         or more current states that have the same parent state, then that parent 
+         state will only be invoked once if none of the current states are able
+         to invoke the given method.
+    
+    When calling this method, you are able to supply zero ore more arguments
+    that can be pass onto the method called on the states. As an example
+    
+    {{{
+    
+      invokeStateMethod('render', context, firstTime);
+    
+    }}}
+    
+    The above call will invoke the render method on the current states
+    and supply the context and firstTime arguments to the method. 
+    
+    Because a statechart can have more than one current state and the method 
+    invoked may return a value, the addition of a callback function may be provided 
+    in order to handle the returned value for each state. As an example, let's say
+    we want to call a calculate method on the current states where the method
+    will return a value when invoked. We can handle the returned values like so:
+    
+    {{{
+    
+      invokeStateMethod('calculate', value, function(state, result) {
+        // .. handle the result returned from calculate that was invoked
+        //    on the given state
+      })
+    
+    }}}
+    
+    If the method invoked does not return a value and a callback function is
+    supplied, then result value will simply be undefined. In all cases, if
+    a callback function is given, it must be the last value supplied to this
+    method.
+    
+    invokeStateMethod will return a value if only one state was able to have 
+    the given method invoked on it, otherwise no value is returned. 
+    
+    @param methodName {String} methodName a method name
+    @param args {Object...} Optional. any additional arguments
+    @param func {Function} Optional. a callback function. Must be the last
+           value supplied if provided.
+           
+    @returns a value if the number of current states is one, otherwise undefined
+             is returned. The value is the result of the method that got invoked
+             on a state.
+  */
+  invokeStateMethod: function(methodName, args, func) {
+    if (methodName === 'unknownEvent') {
+      this.statechartLogError("can not invoke method unkownEvent");
+      return;
+    }
+    
+    args = SC.A(arguments); args.shift();
+    
+    var len = args.length, 
+        arg = len > 0 ? args[len - 1] : null,
+        callback = SC.typeOf(arg) === SC.T_FUNCTION ? args.pop() : null,
+        currentStates = this.get('currentStates'), 
+        i = 0, state = null, checkedStates = {},
+        method, result = undefined, calledStates = 0;
+        
+    len = currentStates.get('length');
+    
+    for (; i < len; i += 1) {
+      state = currentStates.objectAt(i);
+      while (state) {
+        if (checkedStates[state.get('fullPath')]) break;
+        checkedStates[state.get('fullPath')] = YES;
+        method = state[methodName];
+        if (SC.typeOf(method) === SC.T_FUNCTION && !method.isEventHandler) {
+          result = method.apply(state, args);
+          if (callback) callback.call(this, state, result);
+          calledStates += 1;  
+          break;
+        }
+        state = state.get('parentState');
+      }
+    }
+    
+    return calledStates === 1 ? result : undefined;
+  },
+  
   /** @private
   
     Iterate over all the given concurrent states and enter them
