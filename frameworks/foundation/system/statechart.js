@@ -1314,6 +1314,10 @@ Ki.StatechartManager = {
         stateCount = 0,
         key, value, valueIsFunc, attrs = {};
     
+    if (SC.typeOf(rsExample) === SC.T_FUNCTION && rsExample.statePlugin) {
+      rsExample = rsExample.apply(this);
+    }
+
     if (!(SC.kindOf(rsExample, Ki.State) && rsExample.isClass)) {
       this._logStatechartCreationError("Invalid root state example");
       return null;
