@@ -412,6 +412,16 @@ Ki.StatechartManager = {
   }.property().cacheable(),
   
   /**
+    Returns the first current state for this statechart. 
+    
+    @return {Ki.State}
+  */
+  firstCurrentState: function() {
+    var cs = this.get('currentStates');
+    return cs ? cs.objectAt(0) : null;
+  }.property('currentStates').cacheable(),
+  
+  /**
     Returns the count of the current states for this statechart
     
     @returns {Number} the count 
