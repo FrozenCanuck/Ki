@@ -40,6 +40,8 @@ test("check obj before and after destroy", function() {
   equals(rootState.getPath('currentSubstates.length'), 1, "root state should one current substate");
   equals(rootState.get('historyState'), stateA, "root state should have history state of A");
   equals(rootState.get('initialSubstate'), stateA, "root state should have initial substate of A");
+  equals(rootState.get('statechart'), obj, "root state's statechart should be obj");
+  equals(rootState.get('owner'), obj, "root state's owner should be obj");
   
   ok(!stateA.get('isDestroyed'), "state A should not be destoryed");
   equals(stateA.get('parentState'), rootState, "state A should have a parent state of root state");
@@ -60,6 +62,8 @@ test("check obj before and after destroy", function() {
   equals(rootState.get('parentState'), null, "root state should not have a parent state");
   equals(rootState.get('historyState'), null, "root state should not have a history state");
   equals(rootState.get('initialSubstate'), null, "root state should not have an initial substate");
+  equals(rootState.get('statechart'), null, "root state's statechart should be null");
+  equals(rootState.get('owner'), null, "root state's owner should be null");
   
   ok(stateA.get('isDestroyed'), "state A should be destroyed");
   equals(stateA.get('parentState'), null, "state A should not have a parent state");
