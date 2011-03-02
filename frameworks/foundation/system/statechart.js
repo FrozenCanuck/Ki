@@ -298,21 +298,41 @@ Ki.StatechartManager = {
   monitor: null,
   
   /**
+    Used to specify what property (key) on the statechart should be used as the trace property. By
+    default the property is 'trace'.
+
+    @property {String}
+  */
+  statechartTraceKey: 'trace',
+
+  /**
     Indicates whether to trace the statecharts activities. If true then the statechart will output
     its activites to the browser's JS console. Useful for debugging purposes.
-    
+
+    @see #statechartTraceKey
+
     @property {Boolean}
   */
   trace: NO,
   
   /**
+    Used to specify what property (key) on the statechart should be used as the owner property. By
+    default the property is 'owner'.
+
+    @property {String}
+  */
+  statechartOwnerKey: 'owner',
+
+  /**
     Sets who the owner is of this statechart. If null then the owner is this object otherwise
     the owner is the assigned object. 
-  
+
+    @see #statechartOwnerKey
+
     @property {SC.Object}
   */
   owner: null,
-  
+
   /** 
     Indicates if the statechart should be automatically initialized by this
     object after it has been created. If YES then initStatechart will be
@@ -329,7 +349,11 @@ Ki.StatechartManager = {
   },
   
   destroyMixin: function() {
-    var root = this.get('rootState');
+    var root = this.get('rootState'),
+        traceKey = this.get('statechartTraceKey');
+
+    this.removeObserver(traceKey, this, '_statechartTraceDidChange');
+
     root.destroy();
     this.set('rootState', null);
   },
@@ -351,10 +375,14 @@ Ki.StatechartManager = {
     if (this.get('monitorIsActive')) {
       this.set('monitor', Ki.StatechartMonitor.create());
     }
-    
-    var trace = this.get('trace'),
+
+    var traceKey = this.get('statechartTraceKey');
+
+    this.addObserver(traceKey, this, '_statechartTraceDidChange');
+    this._statechartTraceDidChange();
+
+    var trace = this.get('allowTracing'),
         rootState = this.get('rootState'),
-        owner = this.get('owner'),
         msg;
     
     if (trace) this.statechartLogTrace("BEGIN initialize statechart");
@@ -535,7 +563,7 @@ Ki.StatechartManager = {
     var pivotState = null,
         exitStates = [],
         enterStates = [],
-        trace = this.get('trace'),
+        trace = this.get('allowTracing'),
         rootState = this.get('rootState'),
         paramState = state,
         paramFromCurrentState = fromCurrentState;
@@ -697,7 +725,7 @@ Ki.StatechartManager = {
     
     this.notifyPropertyChange('currentStates');
     
-    if (this.get('trace')) {
+    if (this.get('allowTracing')) {
       this.statechartLogTrace("current states after: %@".fmt(this.get('currentStates')));
       this.statechartLogTrace("END gotoState: %@".fmt(gotoState));
     }
@@ -719,7 +747,7 @@ Ki.StatechartManager = {
       }
     }
       
-    if (this.get('trace')) this.statechartLogTrace("exiting state: %@".fmt(state));
+    if (this.get('allowTracing')) this.statechartLogTrace("exiting state: %@".fmt(state));
     
     state.set('currentSubstates', []);
     state.notifyPropertyChange('isCurrentState');
@@ -758,7 +786,7 @@ Ki.StatechartManager = {
       }
     }
     
-    if (this.get('trace')) this.statechartLogTrace("entering state: %@".fmt(state));
+    if (this.get('allowTracing')) this.statechartLogTrace("entering state: %@".fmt(state));
     
     state.notifyPropertyChange('isCurrentState');
     var result = this.enterState(state, context);
@@ -879,7 +907,7 @@ Ki.StatechartManager = {
         len = 0,
         i = 0,
         state = null,
-        trace = this.get('trace');
+        trace = this.get('allowTracing');
     
     if (this._sendEventLocked || this._goStateLocked) {
       // Want to prevent any actions from being processed by the states until 
@@ -971,7 +999,7 @@ Ki.StatechartManager = {
   _traverseStatesToExit: function(state, exitStatePath, stopState, gotoStateActions) {    
     if (!state || state === stopState) return;
     
-    var trace = this.get('trace');
+    var trace = this.get('allowTracing');
     
     // This state has concurrent substates. Therefore we have to make sure we
     // exit them up to this state before we can go any further up the exit chain.
@@ -1010,7 +1038,7 @@ Ki.StatechartManager = {
   _traverseStatesToEnter: function(state, enterStatePath, pivotState, useHistory, gotoStateActions) {
     if (!state) return;
     
-    var trace = this.get('trace');
+    var trace = this.get('allowTracing');
     
     // We do not want to enter states in the enter path until the pivot state has been reached. After
     // the pivot state has been reached, then we can go ahead and actually enter states.
@@ -1393,7 +1421,7 @@ Ki.StatechartManager = {
   /** 
     Used to log a statechart trace message
   */
-  statechartLogTrace: function(msg) {    
+  statechartLogTrace: function(msg) {
     SC.Logger.info("%@: %@".fmt(this.get('statechartLogPrefix'), msg));
   },
   
@@ -1420,7 +1448,18 @@ Ki.StatechartManager = {
     else prefix = "%@<%@, %@>".fmt(className, name, SC.guidFor(this));
     
     return prefix;
-  }.property().cacheable()
+  }.property().cacheable(),
+
+  /** @private @property */
+  allowTracing: function() {
+    var key = this.get('statechartTraceKey');
+    return this.get(key);
+  }.property().cacheable(),
+
+  /** @private */
+  _statechartTraceDidChange: function() {
+    this.notifyPropertyChange('allowTracing');
+  }
   
 };
 

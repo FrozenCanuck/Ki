@@ -101,7 +101,8 @@ Ki.State = SC.Object.extend({
     @property {Boolean}
   */
   trace: function() {
-    return this.getPath('statechart.trace');
+    var key = this.getPath('statechart.statechartTraceKey');
+    return this.getPath('statechart.%@'.fmt(key));
   }.property().cacheable(),
   
   /** 
@@ -115,31 +116,38 @@ Ki.State = SC.Object.extend({
   */
   owner: function() {
     var sc = this.get('statechart'),
-        owner = sc.get('owner');
+        key = sc ? sc.get('statechartOwnerKey') : null,
+        owner = sc ? sc.get(key) : null;
     return owner ? owner : sc;
   }.property().cacheable(),
   
   init: function() {
     sc_super();
-    
+
     this._registeredEventHandlers = {};
     this._registeredStringEventHandlers = {};
     this._registeredRegExpEventHandlers = [];
-    
+
     // Setting up observes this way is faster then using .observes,
     // which adds a noticable increase in initialization time.
-    var sc = this.get('statechart');
+    var sc = this.get('statechart'),
+        ownerKey = sc ? sc.get('statechartOwnerKey') : null,
+        traceKey = sc ? sc.get('statechartTraceKey') : null;
+
     if (sc) {
-      sc.addObserver('owner', this, '_statechartOwnerDidChange');
-      sc.addObserver('trace', this, '_statechartTraceDidChange');
+      sc.addObserver(ownerKey, this, '_statechartOwnerDidChange');
+      sc.addObserver(traceKey, this, '_statechartTraceDidChange');
     }
   },
   
   destroy: function() {
-    var sc = this.get('statechart');
+    var sc = this.get('statechart'),
+        ownerKey = sc ? sc.get('statechartOwnerKey') : null,
+        traceKey = sc ? sc.get('statechartTraceKey') : null;
+
     if (sc) {
-      sc.removeObserver('owner', this, '_statechartOwnerDidChange');
-      sc.removeObserver('trace', this, '_statechartTraceDidChange');
+      sc.removeObserver(ownerKey, this, '_statechartOwnerDidChange');
+      sc.removeObserver(traceKey, this, '_statechartTraceDidChange');
     }
 
     var substates = this.get('substates');
@@ -154,6 +162,10 @@ Ki.State = SC.Object.extend({
     this.set('parentState', null);
     this.set('historyState', null);
     this.set('initialSubstate', null);
+    this.set('statechart', null);
+
+    this.notifyPropertyChange('trace');
+    this.notifyPropertyChange('owner');
 
     sc_super();
   },
