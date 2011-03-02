@@ -342,6 +342,17 @@ Ki.StatechartManager = {
   */
   autoInitStatechart: YES,
   
+  /**
+    If yes, any warning messages produced by the statechart or any of its states will
+    not be logged, otherwise all warning messages will be logged. 
+    
+    While designing and debugging your statechart, it's best to keep this value false.
+    In production you can then suppress the warning messages.
+    
+    @property {Boolean}
+  */
+  suppressStatechartWarnings: NO,
+  
   initMixin: function() {
     if (this.get('autoInitStatechart')) {
       this.initStatechart();
@@ -1436,6 +1447,7 @@ Ki.StatechartManager = {
     Used to log a statechart warning message
   */
   statechartLogWarning: function(msg) {
+    if (this.get('suppressStatechartWarnings')) return;
     SC.Logger.warn("WARN %@: %@".fmt(this.get('statechartLogPrefix'), msg));
   },
   
