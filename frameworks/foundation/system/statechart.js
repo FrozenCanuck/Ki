@@ -328,6 +328,12 @@ Ki.StatechartManager = {
     }
   },
   
+  destroyMixin: function() {
+    var root = this.get('rootState');
+    root.destroy();
+    this.set('rootState', null);
+  },
+
   /**
     Initializes the statechart. By initializing the statechart, it will create all the states and register
     them with the statechart. Once complete, the statechart can be used to go to states and send events to.
@@ -511,6 +517,11 @@ Ki.StatechartManager = {
     
     if (!this.get('statechartIsInitialized')) {
       this.statechartLogError("can not go to state %@. statechart has not yet been initialized".fmt(state));
+      return;
+    }
+    
+    if (this.get('isDestroyed')) {
+      this.statechartLogError("can not go to state %@. statechart is destroyed".fmt(this));
       return;
     }
     
@@ -856,6 +867,12 @@ Ki.StatechartManager = {
     @returns {SC.Responder} the responder that handled it or null
   */
   sendEvent: function(event, arg1, arg2) {
+    
+    if (this.get('isDestroyed')) {
+      this.statechartLogError("can send event %@. statechart is destroyed".fmt(event));
+      return;
+    }
+    
     var statechartHandledEvent = NO,
         eventHandled = NO,
         currentStates = this.get('currentStates').slice(),

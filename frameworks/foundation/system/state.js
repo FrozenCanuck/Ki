@@ -135,6 +135,29 @@ Ki.State = SC.Object.extend({
     }
   },
   
+  destroy: function() {
+    var sc = this.get('statechart');
+    if (sc) {
+      sc.removeObserver('owner', this, '_statechartOwnerDidChange');
+      sc.removeObserver('trace', this, '_statechartTraceDidChange');
+    }
+
+    var substates = this.get('substates');
+    if (substates) {
+      substates.forEach(function(state) {
+        state.destroy();
+      });
+    }
+
+    this.set('substates', null);
+    this.set('currentSubstates', null);
+    this.set('parentState', null);
+    this.set('historyState', null);
+    this.set('initialSubstate', null);
+
+    sc_super();
+  },
+
   /**
     Used to initialize this state. To only be called by the owning statechart.
   */
