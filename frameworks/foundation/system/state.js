@@ -849,7 +849,8 @@ Ki.State = SC.Object.extend({
 
 /**
   Use this when you want to plug-in a state into a statechart. This is beneficial
-  in cases where you split your statechart's states up into multiple files.
+  in cases where you split your statechart's states up into multiple files and
+  don't want to fuss with the sc_require construct.
   
   Example:
   
@@ -863,19 +864,33 @@ Ki.State = SC.Object.extend({
           
           a: Ki.State.plugin('path.to.a.state.class'),
           
-          b: Ki.State.pluing('path.to.another.state.class)
+          b: Ki.State.plugin('path.to.another.state.class')
         
         })
       
       })
     
     }}}
+    
+  You can also supply hashes the plugin feature in order to enhance a state or
+  implement required functionality:
+  
+    {{{
+    
+      SomeMixin = { ... };
+    
+      stateA: Ki.State.plugin('path.to.state', SomeMixin, { ... })
+    
+    }}}
   
   @param value {String} property path to a state class
+  @param args {Hash,...} Optional. Hash objects to be added to the created state
 */
 Ki.State.plugin = function(value) {
+  var args = SC.A(arguments); args.shift();
   var func = function() {
-    return SC.objectForPropertyPath(value);
+    var klass = SC.objectForPropertyPath(value);
+    return klass.extend.apply(klass, args);
   };
   func.statePlugin = YES;
   return func;

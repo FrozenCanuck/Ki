@@ -7,7 +7,7 @@ var statechart = null;
 externalState1 = null;
 externalState2 = null;
 
-module("Ki.Statechart: Plugin State Tests", {
+module("Ki.State.plugin: Nest States Tests", {
   setup: function() {
     
     externalState1 = Ki.State.extend({
