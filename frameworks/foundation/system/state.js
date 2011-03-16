@@ -6,6 +6,7 @@
 /*globals Ki */
 
 /**
+
   Represents a state within a statechart. 
   
   The statechart actively manages all states belonging to it. When a state is created, 
@@ -13,6 +14,9 @@
   
   You do not create an instance of a state itself. The statechart manager will go through its 
   state heirarchy and create the states itself.
+
+  @author Michael Cohen
+
 */
 Ki.State = SC.Object.extend({
   

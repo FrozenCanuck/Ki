@@ -210,6 +210,8 @@ sc_require('system/state');
   Using state plug-in functionality is optional. If you use the plug-in feature you can break up your statechart
   into as many files as you see fit.
 
+  @author Michael Cohen
+
 */
 
 Ki.StatechartManager = {
