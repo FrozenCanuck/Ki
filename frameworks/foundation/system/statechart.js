@@ -394,7 +394,7 @@ Ki.StatechartManager = {
     this.addObserver(traceKey, this, '_statechartTraceDidChange');
     this._statechartTraceDidChange();
 
-    var trace = this.get('allowTracing'),
+    var trace = this.get('allowStatechartTracing'),
         rootState = this.get('rootState'),
         msg;
     
@@ -576,7 +576,7 @@ Ki.StatechartManager = {
     var pivotState = null,
         exitStates = [],
         enterStates = [],
-        trace = this.get('allowTracing'),
+        trace = this.get('allowStatechartTracing'),
         rootState = this.get('rootState'),
         paramState = state,
         paramFromCurrentState = fromCurrentState;
@@ -738,7 +738,7 @@ Ki.StatechartManager = {
     
     this.notifyPropertyChange('currentStates');
     
-    if (this.get('allowTracing')) {
+    if (this.get('allowStatechartTracing')) {
       this.statechartLogTrace("current states after: %@".fmt(this.get('currentStates')));
       this.statechartLogTrace("END gotoState: %@".fmt(gotoState));
     }
@@ -760,7 +760,7 @@ Ki.StatechartManager = {
       }
     }
       
-    if (this.get('allowTracing')) this.statechartLogTrace("exiting state: %@".fmt(state));
+    if (this.get('allowStatechartTracing')) this.statechartLogTrace("exiting state: %@".fmt(state));
     
     state.set('currentSubstates', []);
     state.notifyPropertyChange('isCurrentState');
@@ -802,7 +802,7 @@ Ki.StatechartManager = {
       }
     }
     
-    if (this.get('allowTracing')) this.statechartLogTrace("entering state: %@".fmt(state));
+    if (this.get('allowStatechartTracing')) this.statechartLogTrace("entering state: %@".fmt(state));
     
     state.notifyPropertyChange('isCurrentState');
   
@@ -926,7 +926,7 @@ Ki.StatechartManager = {
         len = 0,
         i = 0,
         state = null,
-        trace = this.get('allowTracing');
+        trace = this.get('allowStatechartTracing');
     
     if (this._sendEventLocked || this._goStateLocked) {
       // Want to prevent any actions from being processed by the states until 
@@ -1018,7 +1018,7 @@ Ki.StatechartManager = {
   _traverseStatesToExit: function(state, exitStatePath, stopState, gotoStateActions) {    
     if (!state || state === stopState) return;
     
-    var trace = this.get('allowTracing');
+    var trace = this.get('allowStatechartTracing');
     
     // This state has concurrent substates. Therefore we have to make sure we
     // exit them up to this state before we can go any further up the exit chain.
@@ -1057,7 +1057,7 @@ Ki.StatechartManager = {
   _traverseStatesToEnter: function(state, enterStatePath, pivotState, useHistory, gotoStateActions) {
     if (!state) return;
     
-    var trace = this.get('allowTracing');
+    var trace = this.get('allowStatechartTracing');
     
     // We do not want to enter states in the enter path until the pivot state has been reached. After
     // the pivot state has been reached, then we can go ahead and actually enter states.
@@ -1471,14 +1471,14 @@ Ki.StatechartManager = {
   }.property().cacheable(),
 
   /** @private @property */
-  allowTracing: function() {
+  allowStatechartTracing: function() {
     var key = this.get('statechartTraceKey');
     return this.get(key);
   }.property().cacheable(),
 
   /** @private */
   _statechartTraceDidChange: function() {
-    this.notifyPropertyChange('allowTracing');
+    this.notifyPropertyChange('allowStatechartTracing');
   }
   
 };
