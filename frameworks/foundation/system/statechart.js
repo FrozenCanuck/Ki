@@ -764,7 +764,10 @@ Ki.StatechartManager = {
     
     state.set('currentSubstates', []);
     state.notifyPropertyChange('isCurrentState');
+    
+    state.willExitState();
     var result = this.exitState(state, context);
+    state.didExitState();
     
     if (this.get('monitorIsActive')) this.get('monitor').pushExitedState(state);
     
@@ -802,7 +805,10 @@ Ki.StatechartManager = {
     if (this.get('allowTracing')) this.statechartLogTrace("entering state: %@".fmt(state));
     
     state.notifyPropertyChange('isCurrentState');
+  
+    state.willEnterState();
     var result = this.enterState(state, context);
+    state.didEnterState();
     
     if (this.get('monitorIsActive')) this.get('monitor').pushEnteredState(state);
     

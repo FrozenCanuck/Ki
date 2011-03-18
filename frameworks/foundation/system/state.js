@@ -26,7 +26,7 @@ Ki.State = SC.Object.extend({
     @property {String}
   */
   name: null,
-  
+   
   /**
     This state's parent state. Managed by the statechart
     
@@ -131,6 +131,7 @@ Ki.State = SC.Object.extend({
     this._registeredEventHandlers = {};
     this._registeredStringEventHandlers = {};
     this._registeredRegExpEventHandlers = [];
+    this._registeredStateObserveHandlers = {};
 
     // Setting up observes this way is faster then using .observes,
     // which adds a noticable increase in initialization time.
@@ -160,6 +161,8 @@ Ki.State = SC.Object.extend({
         state.destroy();
       });
     }
+    
+    this._teardownAllStateObserveHandlers();
 
     this.set('substates', null);
     this.set('currentSubstates', null);
@@ -170,6 +173,11 @@ Ki.State = SC.Object.extend({
 
     this.notifyPropertyChange('trace');
     this.notifyPropertyChange('owner');
+    
+    this._registeredEventHandlers = null;
+    this._registeredStringEventHandlers = null;
+    this._registeredRegExpEventHandlers = null;
+    this._registeredStateObserveHandlers = null;
 
     sc_super();
   },
@@ -214,6 +222,11 @@ Ki.State = SC.Object.extend({
       
       if (valueIsFunc && value.isEventHandler) {
         this._registerEventHandler(key, value);
+        continue;
+      }
+      
+      if (valueIsFunc && value.isStateObserveHandler) {
+        this._registerStateObserveHandler(key, value);
         continue;
       }
       
@@ -323,6 +336,31 @@ Ki.State = SC.Object.extend({
       
       this.stateLogError("Invalid event %@ for event handler %@ in state %@".fmt(event, name, this));
     }
+  },
+  
+  /** @private 
+  
+    Registers state observe handlers with this state. State observe handlers behave just like
+    when you apply observes() on a method but will only be active when the state is currently 
+    entered, otherwise the handlers are inactive until the next time the state is entered
+  */
+  _registerStateObserveHandler: function(name, handler) {
+    var i = 0, 
+        args = handler.args, 
+        len = args.length, 
+        arg, validHandlers = YES;
+    
+    for (; i < len; i += 1) {
+      arg = args[i];
+      if (SC.typeOf(arg) !== SC.T_STRING || SC.empty(arg)) { 
+        this.stateLogError("Invalid argument %@ for state observe handler %@ in state %@".fmt(arg, name, this));
+        validHandlers = NO;
+      }
+    }
+    
+    if (!validHandlers) return;
+    
+    this._registeredStateObserveHandlers[name] = handler.args;
   },
   
   /** @private
@@ -663,6 +701,11 @@ Ki.State = SC.Object.extend({
       return NO;
     }    
     
+    if (this._registeredStateObserveHandlers[event]) {
+      this.stateLogWarning("state %@ can not handle event %@ since it is a registered state observe handler".fmt(this, event));
+      return NO;
+    }
+    
     // Now begin by trying a basic method on the state to respond to the event
     if (SC.typeOf(this[event]) === SC.T_FUNCTION) {
       if (trace) this.stateLogTrace("will handle event %@".fmt(event));
@@ -729,6 +772,28 @@ Ki.State = SC.Object.extend({
   enterState: function(context) { },
   
   /**
+    Notification called just before enterState is invoked. 
+    
+    Note: This is intended to be used by the owning statechart but it can be overridden if 
+    you need to do something special.
+    
+    @see #enterState
+  */
+  willEnterState: function() { },
+  
+  /**
+    Notification called just after enterState is invoked. 
+    
+    Note: This is intended to be used by the owning statechart but it can be overridden if 
+    you need to do something special.
+    
+    @see #enterState
+  */
+  didEnterState: function() { 
+    this._setupAllStateObserveHandlers();
+  },
+  
+  /**
     Called whenever this state is to be exited during a state transition process. This is 
     useful when you want the state to peform some clean up procedures.
     
@@ -757,6 +822,93 @@ Ki.State = SC.Object.extend({
   exitState: function(context) { },
   
   /**
+    Notification called just before exitState is invoked. 
+    
+    Note: This is intended to be used by the owning statechart but it can be overridden 
+    if you need to do something special.
+    
+    @see #exitState
+  */
+  willExitState: function() { 
+    this._teardownAllStateObserveHandlers();
+  },
+  
+  /**
+    Notification called just after exitState is invoked. 
+    
+    Note: This is intended to be used by the owning statechart but it can be overridden 
+    if you need to do something special.
+    
+    @see #exitState
+  */
+  didExitState: function() { },
+  
+  /** @private 
+  
+    Used to setup all the state observer handlers. Should be done when
+    the state has been entered.
+  */
+  _setupAllStateObserveHandlers: function() {
+    this._configureAllStateObserveHandlers('addObserver');
+  },
+  
+  /** @private 
+  
+    Used to teardown all the state observer handlers. Should be done when
+    the state is being exited.
+  */
+  _teardownAllStateObserveHandlers: function() {
+    this._configureAllStateObserveHandlers('removeObserver');
+  },
+  
+  /** @private 
+  
+    Primary method used to either add or remove this state as an observer
+    based on all the state observe handlers that have been registered with
+    this state.
+    
+    Note: The code to add and remove the state as an observer has been
+    taken from the observerable mixin and made slightly more generic. However,
+    having this code in two different places is not ideal, but for now this
+    will have to do. In the future the code should be refactored so that
+    there is one common function that both the observerable mixin and the 
+    statechart framework use.  
+  */
+  _configureAllStateObserveHandlers: function(action) {
+    var key, values, value, dotIndex, path, observer, i, root;
+
+    for (key in this._registeredStateObserveHandlers) {
+      values = this._registeredStateObserveHandlers[key];
+      for (i = 0; i < values.length; i += 1) {
+        path = values[i]; observer = key;
+  
+        // Use the dot index in the path to determine how the state
+        // should add itself as an observer.
+  
+        dotIndex = path.indexOf('.');
+
+        if (dotIndex < 0) {
+          this[action](path, this, observer);
+        } else if (path.indexOf('*') === 0) {
+          this[action](path.slice(1), this, observer);
+        } else {
+          root = null;
+
+          if (dotIndex === 0) {
+            root = this; path = path.slice(1);
+          } else if (dotIndex === 4 && path.slice(0, 5) === 'this.') {
+            root = this; path = path.slice(5);
+          } else if (dotIndex < 0 && path.length === 4 && path === 'this') {
+            root = this; path = '';
+          }
+
+          SC.Observers[action](path, this, observer, root);
+        }
+      }
+    }
+  },
+  
+  /**
     Call when an asynchronous action need to be performed when either entering or exiting
     a state.
     
@@ -779,6 +931,7 @@ Ki.State = SC.Object.extend({
     if (this._registeredEventHandlers[event]) return false;
     if (SC.typeOf(this[event]) === SC.T_FUNCTION) return true;
     if (this._registeredStringEventHandlers[event]) return true;
+    if (this._registeredStateObserveHandlers[event]) return false;
     
     var len = this._registeredRegExpEventHandlers.length,
         i = 0,
@@ -957,6 +1110,62 @@ Ki.State.design = Ki.State.extend;
 Function.prototype.handleEvents = function() {
   this.isEventHandler = YES;
   this.events = arguments;
+  return this;
+};
+
+/**
+  Extends the JS Function object with the stateObserves method that will
+  create a state observe handler on a given state object. 
+  
+  Use a stateObserves() instead of the common observes() method when you want a 
+  state to observer changes to some property on the state itself or some other 
+  object. 
+  
+  Any method on the state that has stateObserves is considered a state observe
+  handler and behaves just like when you use observes() on a method, but with an
+  important difference. When you apply stateObserves to a method on a state, those
+  methods will be active *only* when the state is entered, otherwise those methods
+  will be inactive. This removes the need for you having to explicitly call
+  addObserver and removeObserver. As an example:
+  
+  {{{
+  
+    state = Ki.State.extend({
+    
+      foo: null,
+      
+      user: null,
+    
+      observeHandlerA: function(target, key) {
+        
+      }.stateObserves('MyApp.someController.status'),
+      
+      observeHandlerB: function(target, key) {
+      
+      }.stateObserves('foo'),
+      
+      observeHandlerC: function(target, key) {
+      
+      }.stateObserves('.user.name', '.user.salary')
+    
+    })
+  
+  }}}
+  
+  Above, state has three state observe handlers: observeHandlerA, observeHandlerB, and
+  observeHandlerC. When state is entered, the state will automatically add itself as
+  an observer for all of its registered state observe handlers. Therefore when
+  foo changes, observeHandlerB will be invoked, and when MyApp.someController's status
+  changes then observeHandlerA will be invoked. The moment that state is exited then
+  the state will automatically remove itself as an observer for all of its registered
+  state observe handlers. Therefore none of the state observe handlers will be
+  invoked until the next time the state is entered. 
+  
+  @param {String...} args
+*/
+Function.prototype.stateObserves = function() {
+  this.isStateObserveHandler = YES;
+  this.args = SC.A(arguments);
   return this;
 };
 
