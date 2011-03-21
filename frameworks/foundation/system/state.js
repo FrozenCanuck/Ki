@@ -97,6 +97,14 @@ Ki.State = SC.Object.extend({
   currentSubstates: null,
   
   /** 
+    An array of this state's substates that are currently entered. Managed by
+    the statechart.
+    
+    @property {Array}
+  */
+  enteredSubstates: null,
+  
+  /** 
     Indicates if this state should trace actions. Useful for debugging
     purposes. Managed by the statechart.
   
@@ -166,6 +174,7 @@ Ki.State = SC.Object.extend({
 
     this.set('substates', null);
     this.set('currentSubstates', null);
+    this.set('enteredSubstates', null);
     this.set('parentState', null);
     this.set('historyState', null);
     this.set('initialSubstate', null);
@@ -275,6 +284,7 @@ Ki.State = SC.Object.extend({
     
     this.set('substates', substates);
     this.set('currentSubstates', []);
+    this.set('enteredSubstates', []);
     this.set('stateIsInitialized', YES);
   },
   
@@ -582,8 +592,21 @@ Ki.State = SC.Object.extend({
   */
   stateIsCurrentSubstate: function(state) {
     if (SC.typeOf(state) === SC.T_STRING) state = this.get('statechart').getState(state);
-    return this.get('currentSubstates').indexOf(state) >= 0;
+    var current = this.get('currentSubstates');
+    return !!current && current.indexOf(state) >= 0;
   }, 
+  
+  /**
+    Used to check if a given state is a substate of this state that is currently entered. 
+    
+    @param state {State|String} either a state object of the name of a state
+    @returns {Boolean} true if the given state is a entered substate, otherwise false is returned
+  */
+  stateIsEnteredSubstate: function(state) {
+    if (SC.typeOf(state) === SC.T_STRING) state = this.get('statechart').getState(state);
+    var entered = this.get('enteredSubstates');
+    return !!entered && entered.indexOf(state) >= 0;
+  },
   
   /**
     Indicates if this state is the root state of the statechart.
@@ -601,7 +624,7 @@ Ki.State = SC.Object.extend({
   */
   isCurrentState: function() {
     return this.stateIsCurrentSubstate(this);
-  }.property().cacheable(),
+  }.property('currentSubstates').cacheable(),
   
   /**
     Indicates if this state is a concurrent state
@@ -611,6 +634,17 @@ Ki.State = SC.Object.extend({
   isConcurrentState: function() {
     return this.getPath('parentState.substatesAreConcurrent');
   }.property(),
+  
+  /**
+    Indicates if this state is a currently entered state. 
+    
+    A state is currently entered if during a state transition process the
+    state's enterState method was invoked, but only after its exitState method 
+    was called, if at all.
+  */
+  isEnteredState: function() {
+    return this.stateIsEnteredSubstate(this);
+  }.property('enteredSubstates').cacheable(),
   
   /**
     Indicate if this state has any substates
@@ -626,8 +660,16 @@ Ki.State = SC.Object.extend({
   */
   hasCurrentSubstates: function() {
     var current = this.get('currentSubstates');
-    return !SC.none(current) && current.get('length') > 0;
-  }.property('currentSubstates'),
+    return !!current && current.get('length') > 0;
+  }.property('currentSubstates').cacheable(),
+  
+  /**
+    Indicates if this state has any currently entered substates
+  */
+  hasEnteredSubstates: function() {
+    var entered = this.get('enteredSubstates');
+    return !!entered  && entered.get('length') > 0;
+  }.property('enteredSubstates').cacheable(),
   
   /**
     Used to re-enter this state. Call this only when the state a current state of

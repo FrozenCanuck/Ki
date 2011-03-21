@@ -386,7 +386,7 @@ Ki.StatechartManager = {
     this.sendAction = this.sendEvent;
     
     if (this.get('monitorIsActive')) {
-      this.set('monitor', Ki.StatechartMonitor.create());
+      this.set('monitor', Ki.StatechartMonitor.create({ statechart: this }));
     }
 
     var traceKey = this.get('statechartTraceKey');
@@ -480,11 +480,31 @@ Ki.StatechartManager = {
   /**
     Checks if a given state is a current state of this statechart. 
     
-    @param state {State} the state to check
+    @param state {State|String} the state to check
     @returns {Boolean} true if the state is a current state, otherwise fals is returned
   */
   stateIsCurrentState: function(state) {
     return this.get('rootState').stateIsCurrentSubstate(state);
+  },
+  
+  /**
+    Returns an array of all the states that are currently entered for
+    this statechart.
+    
+    @returns {Array} the currently entered states
+  */
+  enteredStates: function() {
+    return this.getPath('rootState.enteredSubstates');
+  }.property().cacheable(),
+  
+  /**
+    Checks if a given state is a currently entered state of this statechart.
+    
+    @param state {State|String} the state to check
+    @returns {Boolean} true if the state is a currently entered state, otherwise false is returned
+  */
+  stateIsEntered: function(state) {
+    return this.get('rootState').stateIsEnteredSubstate(state);
   },
   
   /**
@@ -736,7 +756,10 @@ Ki.StatechartManager = {
       }
     }
     
+    this.beginPropertyChanges();
     this.notifyPropertyChange('currentStates');
+    this.notifyPropertyChange('enteredStates');
+    this.endPropertyChanges();
     
     if (this.get('allowStatechartTracing')) {
       this.statechartLogTrace("current states after: %@".fmt(this.get('currentStates')));
@@ -752,12 +775,20 @@ Ki.StatechartManager = {
   
   /** @private */
   _exitState: function(state, context) {
+    var parentState;
+    
     if (state.get('currentSubstates').indexOf(state) >= 0) {  
-      var parentState = state.get('parentState');
+      parentState = state.get('parentState');
       while (parentState) {
         parentState.get('currentSubstates').removeObject(state);
         parentState = parentState.get('parentState');
       }
+    }
+    
+    parentState = state;
+    while (parentState) {
+      parentState.get('enteredSubstates').removeObject(state);
+      parentState = parentState.get('parentState');
     }
       
     if (this.get('allowStatechartTracing')) this.statechartLogTrace("exiting state: %@".fmt(state));
@@ -797,9 +828,15 @@ Ki.StatechartManager = {
     if (current) {
       parentState = state;
       while (parentState) {
-        parentState.get('currentSubstates').push(state);
+        parentState.get('currentSubstates').pushObject(state);
         parentState = parentState.get('parentState');
       }
+    }
+    
+    parentState = state;
+    while (parentState) {
+      parentState.get('enteredSubstates').pushObject(state);
+      parentState = parentState.get('parentState');
     }
     
     if (this.get('allowStatechartTracing')) this.statechartLogTrace("entering state: %@".fmt(state));

@@ -7,6 +7,8 @@
 
 Ki.StatechartMonitor = SC.Object.extend({
   
+  statechart: null,
+  
   sequence: null,
   
   init: function() {
@@ -40,6 +42,23 @@ Ki.StatechartMonitor = SC.Object.extend({
     return Ki.StatechartSequenceMatcher.create({
       statechartMonitor: this
     });
+  },
+  
+  matchEnteredStates: function() {
+    var expected = SC.A(arguments.length === 1 ? arguments[0] : arguments),
+        actual = this.getPath('statechart.enteredStates'),
+        matched = 0,
+        statechart = this.get('statechart');
+    
+    if (expected.length !== actual.length) return NO;
+    
+    expected.forEach(function(item) {
+      if (SC.typeOf(item) === SC.T_STRING) item = statechart.getState(item);
+      if (!item) return;
+      if (statechart.stateIsEntered(item) && item.get('isEnteredState')) matched += 1;
+    });
+    
+    return matched === actual.length;
   },
   
   toString: function() {
