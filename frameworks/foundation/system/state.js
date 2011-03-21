@@ -821,7 +821,7 @@ Ki.State = SC.Object.extend({
     
     @see #enterState
   */
-  willEnterState: function() { },
+  stateWillBecomeEntered: function() { },
   
   /**
     Notification called just after enterState is invoked. 
@@ -831,7 +831,7 @@ Ki.State = SC.Object.extend({
     
     @see #enterState
   */
-  didEnterState: function() { 
+  stateDidBecomeEntered: function() { 
     this._setupAllStateObserveHandlers();
   },
   
@@ -871,7 +871,7 @@ Ki.State = SC.Object.extend({
     
     @see #exitState
   */
-  willExitState: function() { 
+  stateWillBecomeExited: function() { 
     this._teardownAllStateObserveHandlers();
   },
   
@@ -883,7 +883,7 @@ Ki.State = SC.Object.extend({
     
     @see #exitState
   */
-  didExitState: function() { },
+  stateDidBecomeExited: function() { },
   
   /** @private 
   

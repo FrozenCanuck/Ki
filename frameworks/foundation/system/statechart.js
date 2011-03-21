@@ -796,9 +796,9 @@ Ki.StatechartManager = {
     state.set('currentSubstates', []);
     state.notifyPropertyChange('isCurrentState');
     
-    state.willExitState();
+    state.stateWillBecomeExited();
     var result = this.exitState(state, context);
-    state.didExitState();
+    state.stateDidBecomeExited();
     
     if (this.get('monitorIsActive')) this.get('monitor').pushExitedState(state);
     
@@ -843,9 +843,9 @@ Ki.StatechartManager = {
     
     state.notifyPropertyChange('isCurrentState');
   
-    state.willEnterState();
+    state.stateWillBecomeEntered();
     var result = this.enterState(state, context);
-    state.didEnterState();
+    state.stateDidBecomeEntered();
     
     if (this.get('monitorIsActive')) this.get('monitor').pushEnteredState(state);
     
