@@ -1,3 +1,10 @@
+# Ki 0.5.0 March 20, 2011
+
+* Added stateObserves() feature to framework. Thanks to Geoffrey Donaldson (@geoffreyd) for the 
+  original suggestion.
+* Changed allowTracing to allowStatechartTracing in Ki.StatechartManager
+* Enhanced framework to check if a state is currently entered
+
 # Ki 0.4.0 March 6, 2011
 
 * Updated the statechart and state class to now include logic that checks if they can respond to
